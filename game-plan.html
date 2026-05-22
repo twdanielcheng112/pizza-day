@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>《失控視界》— User Story Mapping & Build Order</title>
+<style>
+  :root {
+    --bg: #fafafa;
+    --card: #ffffff;
+    --ink: #1a1a1a;
+    --muted: #666;
+    --line: #e5e5e5;
+    --accent: #2c5282;
+    --r0: #ede7f6;
+    --r0-border: #7e57c2;
+    --r1: #d4edda;
+    --r1-border: #5cb85c;
+    --r2: #fff3cd;
+    --r2-border: #f0ad4e;
+    --r3: #d1ecf1;
+    --r3-border: #5bc0de;
+    --warn: #f8d7da;
+    --warn-border: #d9534f;
+    --code-bg: #f4f4f4;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.7;
+    margin: 0;
+    padding: 40px 20px;
+  }
+  .container { max-width: 1200px; margin: 0 auto; }
+  header {
+    border-bottom: 3px solid var(--accent);
+    padding-bottom: 20px;
+    margin-bottom: 32px;
+  }
+  h1 { font-size: 2.2em; margin: 0 0 8px; color: var(--accent); }
+  .subtitle { color: var(--muted); font-size: 1.05em; }
+  .meta {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+    font-size: 0.9em;
+    color: var(--muted);
+  }
+  .meta span {
+    padding: 3px 10px;
+    background: #eee;
+    border-radius: 12px;
+  }
+  h2 {
+    font-size: 1.6em;
+    margin-top: 48px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--line);
+    color: var(--accent);
+  }
+  h3 { font-size: 1.2em; margin-top: 28px; color: var(--ink); }
+  h4 { margin: 16px 0 6px; color: var(--ink); }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin: 16px 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .core-insight {
+    background: linear-gradient(135deg, #fff5e6 0%, #ffe8cc 100%);
+    border-left: 5px solid #ff9500;
+    padding: 18px 22px;
+    border-radius: 6px;
+    margin: 18px 0;
+    font-size: 1.05em;
+  }
+  .core-insight strong { color: #b35900; }
+  .backbone {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    background: var(--card);
+    padding: 18px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    margin: 16px 0 24px;
+    overflow-x: auto;
+  }
+  .backbone .step {
+    background: var(--accent);
+    color: white;
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-weight: 600;
+    white-space: nowrap;
+    font-size: 0.95em;
+  }
+  .backbone .arrow {
+    color: var(--accent);
+    font-weight: bold;
+    font-size: 1.2em;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--card);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    margin: 12px 0 20px;
+    font-size: 0.88em;
+    table-layout: fixed;
+  }
+  th, td {
+    border: 1px solid var(--line);
+    padding: 10px 8px;
+    vertical-align: top;
+    text-align: left;
+    word-wrap: break-word;
+  }
+  th {
+    background: #f0f4f8;
+    font-weight: 600;
+    text-align: center;
+    color: var(--accent);
+    font-size: 0.92em;
+  }
+  td.row-label {
+    font-weight: 600;
+    text-align: center;
+    white-space: nowrap;
+    width: 7%;
+  }
+  tr.r0 td.row-label { background: var(--r0); border-left: 4px solid var(--r0-border); }
+  tr.r1 td.row-label { background: var(--r1); border-left: 4px solid var(--r1-border); }
+  tr.r2 td.row-label { background: var(--r2); border-left: 4px solid var(--r2-border); }
+  tr.r3 td.row-label { background: var(--r3); border-left: 4px solid var(--r3-border); }
+  td ul { margin: 0; padding-left: 16px; }
+  td li { margin-bottom: 6px; font-size: 0.93em; }
+  td li .tid {
+    display: inline-block;
+    background: #eef;
+    color: var(--accent);
+    font-family: "SF Mono", Consolas, monospace;
+    font-size: 0.85em;
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-right: 4px;
+  }
+  .slice-line {
+    background: #fdf6e3;
+    border: 2px dashed #d4a017;
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin: 20px 0;
+    font-size: 1.02em;
+  }
+  .slice-line strong { color: #8a6500; }
+  .sprint {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-left: 5px solid var(--accent);
+    border-radius: 8px;
+    padding: 18px 22px;
+    margin: 14px 0;
+  }
+  .sprint-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  .sprint-title { font-size: 1.15em; font-weight: 600; color: var(--accent); }
+  .sprint-time {
+    color: var(--muted);
+    font-size: 0.9em;
+    padding: 2px 10px;
+    background: #f0f0f0;
+    border-radius: 12px;
+  }
+  .sprint.r0-sprint { border-left-color: var(--r0-border); background: #f9f6ff; }
+  .sprint.critical { border-left-color: #d9534f; background: #fff8f8; }
+  .sprint.critical .sprint-title::after {
+    content: " ⚠️ 主題成立關鍵";
+    font-size: 0.85em;
+    color: #d9534f;
+    font-weight: 500;
+  }
+  .acceptance {
+    background: var(--code-bg);
+    border-left: 3px solid var(--r1-border);
+    padding: 8px 14px;
+    margin-top: 10px;
+    font-size: 0.95em;
+    border-radius: 4px;
+  }
+  .acceptance strong { color: #2d6a4f; }
+  code {
+    background: var(--code-bg);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: "SF Mono", Consolas, monospace;
+    font-size: 0.9em;
+  }
+  .parallel {
+    background: #e8f5e9;
+    border: 1px solid #a5d6a7;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 16px 0;
+  }
+  .parallel h4 { margin-top: 0; color: #2e7d32; }
+  .next-steps {
+    background: #e3f2fd;
+    border: 1px solid #90caf9;
+    border-radius: 8px;
+    padding: 18px 22px;
+    margin: 20px 0;
+  }
+  .next-steps h3 { margin-top: 0; color: #1565c0; }
+  .next-steps ol li { margin-bottom: 8px; }
+  .legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin: 12px 0 4px;
+    font-size: 0.9em;
+  }
+  .legend-item { display: inline-flex; align-items: center; gap: 6px; }
+  .swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid rgba(0,0,0,0.1);
+  }
+  .persona-box {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin: 14px 0;
+  }
+  .persona {
+    background: var(--card);
+    border-left: 4px solid var(--accent);
+    padding: 14px 18px;
+    border-radius: 6px;
+  }
+  .persona h4 { margin: 0 0 6px; color: var(--accent); }
+  .persona p { margin: 0; font-size: 0.95em; color: var(--ink); }
+  .decision-box {
+    background: #fff8e1;
+    border: 1px solid #ffd54f;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 16px 0;
+  }
+  .decision-box h4 { margin-top: 0; color: #f57f17; }
+  .decision-box .chosen {
+    background: #c8e6c9;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 600;
+    color: #1b5e20;
+  }
+  footer {
+    margin-top: 60px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 0.85em;
+    text-align: center;
+  }
+  @media print {
+    body { background: white; padding: 20px; }
+    .card, table, .sprint { box-shadow: none; break-inside: avoid; }
+  }
+  @media (max-width: 768px) {
+    .persona-box { grid-template-columns: 1fr; }
+    table { font-size: 0.8em; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <h1>《失控視界 Unbounded Vision》</h1>
+  <div class="subtitle">User Story Mapping &amp; Build Order — Team Reference</div>
+  <div class="meta">
+    <span>Engine: Godot 4.6</span>
+    <span>Core Logic: C (maze_core)</span>
+    <span>Type: 2D 迷宮闖關 / 反獎勵機制</span>
+    <span>Workshop: user-story-mapping-workshop</span>
+  </div>
+</header>
+
+<div class="core-insight">
+  <strong>核心反轉:</strong> 玩家越接近一般遊戲中的成功（拿寶箱、解謎、擴視野），反而越接近失敗。<br>
+  <strong>真正的勝利</strong>不是無限擴張，而是學會停止。
+</div>
+
+<h2>Section 0. Workshop Context</h2>
+
+<h3>Scope &amp; Personas</h3>
+<div class="card">
+  <p><strong>Scope:</strong> 核心 gameplay loop（從進入迷宮到結局；先不管選單 / 設定 / 音效配置）</p>
+  <p><strong>Personas:</strong></p>
+  <div class="persona-box">
+    <div class="persona">
+      <h4>🏆 黑客松評審</h4>
+      <p>需要在 5 分鐘 demo 內看懂技術亮點：C 模組、失控公式可視化、迷宮動態擴張。</p>
+    </div>
+    <div class="persona">
+      <h4>🎮 一般玩家</h4>
+      <p>需要自然感受到反轉「aha moment」—— 透過 UI 提示、牆上文字、視野副作用，不是被教學告知。</p>
+    </div>
+  </div>
+</div>
+
+<div class="decision-box">
+  <h4>🔑 關鍵設計決定：離開 loop 的觸發方式</h4>
+  <p>玩家不會一直停在「探索 → 誘惑 → 決定 → 代價」迴圈裡，最終要走向雙出口抉擇。觸發方式選擇了：</p>
+  <p><span class="chosen">✅ 選 b：失控值門檻觸發</span> 當失控值 ≥ 70，C 模組標記「臨界狀態」事件，Godot UI 跳提示「邊界已記住你的貪婪」；假出口開始閃爍但真出口不變。兩個出口都自始至終存在於地圖上，玩家可以隨時走，結局由當下失控值與出口選擇共同判定。</p>
+  <p style="font-size: 0.9em; color: var(--muted);">未選的替代方案：a 玩家主動觸發岔路 UI；c 永遠都在（融入探索）。</p>
+</div>
+
+<h2>Section 1. User Story Mapping</h2>
+
+<h3>Backbone (玩家敘事流)</h3>
+<div class="backbone">
+  <span class="step">① 進入迷宮</span>
+  <span class="arrow">→</span>
+  <span class="step">② 探索與導航</span>
+  <span class="arrow">→</span>
+  <span class="step">③ 遭遇誘惑物件</span>
+  <span class="arrow">→</span>
+  <span class="step">④ 做出擴張決定</span>
+  <span class="arrow">→</span>
+  <span class="step">⑤ 承擔擴張代價</span>
+  <span class="arrow">→</span>
+  <span class="step">⑥ 雙出口抉擇</span>
+  <span class="arrow">→</span>
+  <span class="step">⑦ 結局演出</span>
+</div>
+
+<p style="color: var(--muted); font-size: 0.95em;">
+  ④ 與 ⑤ 之間隱含 gameplay loop（玩家會反覆探索 → 決定 → 承受代價），但 story map 只畫一次。loop 退出條件由 Section 0 的決定 b 處理。
+</p>
+
+<h3>Story Grid（橫向 = 旅程階段 / 縱向 = R0 基底 → R1 MVP → R2 強化 → R3 Polish）</h3>
+
+<div class="legend">
+  <span class="legend-item"><span class="swatch" style="background: var(--r0); border-color: var(--r0-border);"></span>R0 — Style Bible（基底層，1 天 time-box）</span>
+  <span class="legend-item"><span class="swatch" style="background: var(--r1); border-color: var(--r1-border);"></span>R1 — Walking Skeleton（Jam 必交）</span>
+  <span class="legend-item"><span class="swatch" style="background: var(--r2); border-color: var(--r2-border);"></span>R2 — 反轉強化 + Demo 加分</span>
+  <span class="legend-item"><span class="swatch" style="background: var(--r3); border-color: var(--r3-border);"></span>R3 — Polish（時間有剩才做）</span>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th></th>
+      <th>① 進入迷宮</th>
+      <th>② 探索與導航</th>
+      <th>③ 遭遇誘惑物件</th>
+      <th>④ 做出擴張決定</th>
+      <th>⑤ 承擔擴張代價</th>
+      <th>⑥ 雙出口抉擇</th>
+      <th>⑦ 結局演出</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr class="r0">
+      <td class="row-label">🟣<br>R0</td>
+      <td colspan="7" style="background: #faf7ff;">
+        <strong>Style Bible 跨切所有活動：</strong>
+        <span class="tid">T0.1</span>Tone Definition
+        <span class="tid">T0.2</span>Voice Guide
+        <span class="tid">T0.3</span>Color Palette（含失控值階段配色）
+        <span class="tid">T0.4</span>Visual Style + Tile 解析度
+        <span class="tid">T0.5</span>UI Font
+        <span class="tid">T0.6</span>Music Direction
+        <span class="tid">T0.7</span>第一批產出（5-6 tiles + 30s ambient loop）
+      </td>
+    </tr>
+    <tr class="r1">
+      <td class="row-label">🟢<br>R1</td>
+      <td>
+        <ul>
+          <li><span class="tid">T1.1</span>4 向移動 + 撞牆</li>
+          <li><span class="tid">T1.2</span>3×3 初始視野迷霧</li>
+          <li><span class="tid">T1.3</span>HUD 顯示 Vision / Achievement / Instability</li>
+          <li><span class="tid">T1.5</span>用 R0 tile 套件渲染第一房間</li>
+        </ul>
+      </td>
+      <td>
+        <ul>
+          <li><span class="tid">T2.1</span><strong>C 模組 → JSON → Godot TileMap 管線</strong></li>
+          <li><span class="tid">T2.2</span>走過格子 → 迷霧揭開</li>
+          <li><span class="tid">T2.5</span>移動 SFX + 環境 ambient loop</li>
+        </ul>
+      </td>
+      <td>
+        <ul>
+          <li><span class="tid">T3.1</span>寶箱 / 鑰匙 / 視野核心 spawn</li>
+          <li><span class="tid">T3.2</span>假出口（顯眼大門）+ 真出口（小路）同時 spawn</li>
+        </ul>
+      </td>
+      <td>
+        <ul>
+          <li><span class="tid">T4.1</span>E 鍵互動：開寶箱 / 拿核心</li>
+          <li><span class="tid">T4.2</span>開寶箱 → 視野 +1（3×3 → 5×5）</li>
+          <li><span class="tid">T4.3</span>拿核心 → 視野等級跳級</li>
+          <li><span class="tid">T4.5</span>互動 SFX（開箱、拿核心）</li>
+        </ul>
+      </td>
+      <td>
+        <ul>
+          <li><span class="tid">T5.1</span><strong>C 模組失控值公式</strong></li>
+          <li><span class="tid">T5.2</span>UI 失控值即時更新 + 顏色變化</li>
+          <li><span class="tid">T5.3</span>失控 ≥ 31 → C 觸發迷宮擴張、Godot 重渲染</li>
+          <li><span class="tid">T5.7</span>失控階段警示音（31 / 61 / 81）</li>
+        </ul>
+      </td>
+      <td>
+        <ul>
+          <li><span class="tid">T6.1</span>失控 ≥ 70 → C 觸發臨界事件</li>
+          <li><span class="tid">T6.2</span>UI 提示「邊界已記住你的貪婪」</li>
+        </ul>
+      </td>
+      <td>
+        <ul>
+          <li><span class="tid">T7.1</span>結局判定（失控值 + 走哪個出口）</li>
+          <li><span class="tid">T7.2</span>三種結局文字頁面</li>
+          <li><span class="tid">T7.5</span>三段不同 ending music sting</li>
+        </ul>
+      </td>
+    </tr>
+    <tr class="r2">
+      <td class="row-label">🟡<br>R2</td>
+      <td></td>
+      <td>
+        <ul>
+          <li><span class="tid">T2.3</span>牆上暗示文字</li>
+        </ul>
+      </td>
+      <td>
+        <ul>
+          <li><span class="tid">T3.3</span>敵人 + 巡邏 AI</li>
+        </ul>
+      </td>
+      <td>
+        <ul>
+          <li><span class="tid">T4.4</span>「真的要開嗎？」確認 prompt</li>
+        </ul>
+      </td>
+      <td>
+        <ul>
+          <li><span class="tid">T5.4</span>失控 ≥ 61 → 牆壁移動 + 視野副作用</li>
+          <li><span class="tid">T5.6</span><strong>F1 Debug overlay 顯示失控公式</strong>（demo 神器）</li>
+        </ul>
+      </td>
+      <td>
+        <ul>
+          <li><span class="tid">T6.3</span>假出口閃爍 / 真出口隱蔽</li>
+        </ul>
+      </td>
+      <td>
+        <ul>
+          <li><span class="tid">T7.3</span>結局視覺特效</li>
+        </ul>
+      </td>
+    </tr>
+    <tr class="r3">
+      <td class="row-label">🔵<br>R3</td>
+      <td>
+        <ul>
+          <li><span class="tid">T1.4</span>入場淡入 +「尋找出口」提示</li>
+        </ul>
+      </td>
+      <td>
+        <ul>
+          <li><span class="tid">T2.4</span>探索比例計算</li>
+        </ul>
+      </td>
+      <td>
+        <ul>
+          <li><span class="tid">T3.4</span>機關（按鈕、移動牆）</li>
+        </ul>
+      </td>
+      <td></td>
+      <td>
+        <ul>
+          <li><span class="tid">T5.5</span>失控 ≥ 81 → 視野干擾（黑屏、UI 抖動）</li>
+        </ul>
+      </td>
+      <td></td>
+      <td>
+        <ul>
+          <li><span class="tid">T7.4</span>結局回顧（X 寶箱 / 失控值 Y / 擴張 Z 次）</li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="slice-line">
+  <strong>Walking Skeleton（R1 完成定義）:</strong><br>
+  玩家可以 → 啟動 → 看到 3 個數值的 HUD → 在迷宮裡撿一個寶箱 → 視野變大 → 失控值上升並變色 → 失控達 31 時迷宮擴張 → 走進任一出口 → 看到對應結局文字。<br>
+  <em>這條線打通 = 反獎勵機制已能 demo，主題已成立。其他都是放大鏡。</em>
+</div>
+
+<p style="color: var(--muted); font-size: 0.95em;">
+  Task 統計：R0 7 個・R1 22 個・R2 7 個・R3 5 個 = 共 41 個 task。
+</p>
+
+<h2>Section 2. Build Order — Milestones M0 → M6</h2>
+
+<p>R0 完成後，R1 的 22 個 task 依下表分入 6 個 milestone。每個 milestone 完成 = 一次 commit + PR + 團隊 review。</p>
+
+<div class="sprint r0-sprint">
+  <div class="sprint-header">
+    <span class="sprint-title" style="color: var(--r0-border);">M0 — Style Bible（R0）</span>
+    <span class="sprint-time">~ 1 天（硬性 time-box，最多 1.5 天）</span>
+  </div>
+  <p><strong>目標：</strong>產出一份 <code>docs/style-bible.md</code>，讓美術 / 音樂 / UI 隊員「不問你也能做出對的東西」。</p>
+  <ul>
+    <li><span class="tid">T0.1</span>Tone Definition（一句話 + 3 參考遊戲）</li>
+    <li><span class="tid">T0.2</span>Voice Guide（整理 PDF 文字、鎖定句式）</li>
+    <li><span class="tid">T0.3</span>Color Palette 5–7 hex + <strong>失控值四階段配色</strong></li>
+    <li><span class="tid">T0.4</span>Visual Style 方向 + Tile 解析度（建議 16×16 或 32×32）</li>
+    <li><span class="tid">T0.5</span>UI Font（中文 + 英文各一，免費可商用）</li>
+    <li><span class="tid">T0.6</span>Music Direction（一句話 + 1 reference 曲）</li>
+    <li><span class="tid">T0.7</span>第一批產出：5-6 個 tile 樣本 + 30s ambient loop</li>
+  </ul>
+  <div class="acceptance"><strong>驗收：</strong><code>docs/style-bible.md</code> 所有 TBD 都填完；<code>assets/</code> 下至少有 floor、wall、player、chest、exit_real、exit_fake 圖檔 + 1 個 ambient OGG</div>
+</div>
+
+<div class="sprint">
+  <div class="sprint-header">
+    <span class="sprint-title">M1 — C ↔ Godot 通訊管線</span>
+    <span class="sprint-time">~ 1 天</span>
+  </div>
+  <p><strong>目標：</strong>所有後續工作的地基。失敗就 fallback 退守。</p>
+  <ul>
+    <li><span class="tid">T2.1</span>C 編譯成 <code>maze_core</code> 執行檔（macOS + Windows）→ Godot 用 <code>OS.execute()</code> 呼叫 → C 輸出 <code>maze_state.json</code> → Godot 讀 JSON 渲染 TileMap</li>
+  </ul>
+  <div class="acceptance"><strong>驗收：</strong>Godot 啟動 → C 產出 JSON → TileMap 顯示一個隨機迷宮</div>
+  <p style="color: #d9534f; font-size: 0.9em;">
+    ⚠️ <strong>Spike 建議：</strong>先花半天驗證 C 編譯 + JSON 通訊在隊員兩種作業系統都能跑。不通就立刻退守 GDExtension 或全 GDScript（會犧牲技術亮點）。
+  </p>
+</div>
+
+<div class="sprint">
+  <div class="sprint-header">
+    <span class="sprint-title">M2 — Player + Vision + First Render</span>
+    <span class="sprint-time">~ 1 天</span>
+  </div>
+  <ul>
+    <li><span class="tid">T1.1</span>4 向格狀移動 + 撞牆</li>
+    <li><span class="tid">T1.2</span>3×3 初始視野迷霧（Shader 或 Light2D）</li>
+    <li><span class="tid">T1.5</span>用 R0 tile 套件渲染（不再是色塊）</li>
+    <li><span class="tid">T2.2</span>走過格子 → 迷霧永久揭開</li>
+    <li><span class="tid">T2.5</span>移動 SFX + 環境 ambient loop（用 R0 產出）</li>
+  </ul>
+  <div class="acceptance"><strong>驗收：</strong>能在 C 生成的迷宮中走動、有腳步聲、3×3 視野隨玩家移動而揭開</div>
+</div>
+
+<div class="sprint">
+  <div class="sprint-header">
+    <span class="sprint-title">M3 — Objects + Interaction</span>
+    <span class="sprint-time">~ 1.5 天</span>
+  </div>
+  <ul>
+    <li><span class="tid">T3.1</span>寶箱 / 鑰匙 / 視野核心 spawn（C 在 JSON 標記座標）</li>
+    <li><span class="tid">T3.2</span>假出口（顯眼大門）+ 真出口（小路）同時 spawn</li>
+    <li><span class="tid">T4.1</span>E 鍵互動偵測</li>
+    <li><span class="tid">T4.2</span>開寶箱 → 視野 +1（3×3 → 5×5 → 7×7 → 9×9）</li>
+    <li><span class="tid">T4.3</span>拿核心 → 視野等級跳級</li>
+    <li><span class="tid">T4.5</span>互動 SFX</li>
+  </ul>
+  <div class="acceptance"><strong>驗收：</strong>撿 3 個視野核心後，視野從 3×3 變到 9×9；可以看到兩個出口在地圖上</div>
+</div>
+
+<div class="sprint critical">
+  <div class="sprint-header">
+    <span class="sprint-title">M4 — Instability Core</span>
+    <span class="sprint-time">~ 1.5 天</span>
+  </div>
+  <p><strong>黑客松靈魂。</strong>沒有這個，主題不成立。</p>
+  <ul>
+    <li><span class="tid">T1.3</span>HUD 顯示三數值（Vision / Achievement / Instability）</li>
+    <li><span class="tid">T5.1</span>C 模組計算失控值：<code>vision×10 + chests×5 + puzzles×8 + enemies×3 + explored/10</code></li>
+    <li><span class="tid">T5.2</span>UI 失控值即時更新 + 顏色變化（綠 → 黃 → 橘 → 紅，用 R0 配色）</li>
+    <li><span class="tid">T5.7</span>失控階段警示音（≥31 / ≥61 / ≥81 三段）</li>
+  </ul>
+  <div class="acceptance"><strong>驗收：</strong>玩家每開一個寶箱，HUD 失控值跳數字 + 顏色變化 + 警示音；按 F1（R2 才實作的 debug overlay）可看公式拆解</div>
+</div>
+
+<div class="sprint">
+  <div class="sprint-header">
+    <span class="sprint-title">M5 — Maze Expansion Feedback</span>
+    <span class="sprint-time">~ 1 天</span>
+  </div>
+  <ul>
+    <li><span class="tid">T5.3</span>失控 ≥ 31 → C 模組擴張迷宮（新房間 / 新走道）→ Godot 動態擴 TileMap</li>
+  </ul>
+  <div class="acceptance"><strong>驗收：</strong>玩家失控值跨過 31 那瞬間，能親眼看到迷宮邊界向外推。失敗條件：擴張卡頓、玩家被擠出 walkable tile</div>
+</div>
+
+<div class="sprint">
+  <div class="sprint-header">
+    <span class="sprint-title">M6 — Endings</span>
+    <span class="sprint-time">~ 1 天</span>
+  </div>
+  <ul>
+    <li><span class="tid">T6.1</span>失控 ≥ 70 → C 觸發「臨界狀態」事件</li>
+    <li><span class="tid">T6.2</span>UI 提示「邊界已記住你的貪婪」</li>
+    <li><span class="tid">T7.1</span>結局判定（失控=100 → 壞；走假出口 → 普通；低失控走真出口 → 真）</li>
+    <li><span class="tid">T7.2</span>三種結局文字頁面（文案直接抄 PDF）</li>
+    <li><span class="tid">T7.5</span>三段不同 ending music sting</li>
+  </ul>
+  <div class="acceptance"><strong>驗收：</strong>玩家三種結局都觸發得到、文字 + 音樂搭配正確。整個遊戲能從頭跑到尾。M6 完成 = 可交件。</div>
+</div>
+
+<h2>Section 3. 並行協作機會</h2>
+
+<div class="parallel">
+  <h4>✅ 可並行</h4>
+  <ul>
+    <li><strong>M0 期間：</strong>美術做 tile 草稿 / 音樂家做 ambient loop / PM 寫 voice guide —— 三軌同時跑</li>
+    <li><strong>M1 期間：</strong>A 寫 C maze 生成 / B 做 Godot 端 MazeBridge —— 用 JSON 介面切開</li>
+    <li><strong>M2-M3 期間：</strong>美術繼續做物件 sprite / 工程做場景互動 —— 不卡彼此</li>
+    <li><strong>M4 期間：</strong>A 做 HUD UI / B 調失控公式係數 —— 介面是 C 函式簽名</li>
+  </ul>
+  <h4 style="color: #c62828;">❌ 不能並行（共用檔案衝突）</h4>
+  <ul>
+    <li>同時改 <code>Maze.tscn</code></li>
+    <li>同時改 <code>maze_core.c</code> 同一函式</li>
+    <li>同時改 <code>docs/style-bible.md</code> 同一節（M0 期間用分節分配）</li>
+  </ul>
+  <p style="font-size: 0.9em; color: var(--muted);">每次平行 session 後跑 <code>/worktree-cleanup</code>（見 CLAUDE.md 規範）。</p>
+</div>
+
+<h2>Section 4. 時程估算</h2>
+
+<div class="card">
+  <p><strong>M0 (Style Bible):</strong> 1 天</p>
+  <p><strong>M1–M6 (R1 完成 = MVP):</strong> 約 7 天</p>
+  <p><strong>R2 (反轉強化 + Debug overlay):</strong> 約 2–3 天</p>
+  <p><strong>R3 (Polish):</strong> 截止前剩餘時間</p>
+  <p style="color: var(--muted); font-size: 0.95em;">
+    ※ 假設 2-3 人並行。M0 + M1-M6 = 8 天。若黑客松時程 &lt; 8 天，砍 R2/R3 即可（M6 完成本身就可交件）。
+  </p>
+</div>
+
+<div class="next-steps">
+  <h3>下一步（請團隊回覆）</h3>
+  <ol>
+    <li><strong>分工：</strong>誰負責 C maze_core？誰負責 Godot 場景？誰負責 R0 美術 / 音樂 / 文案？</li>
+    <li><strong>M0 啟動：</strong>到 <code>docs/style-bible.md</code> 把 TBD 都填掉。<strong>1 天 time-box，不要追求完美。</strong></li>
+    <li><strong>M1 spike 先做：</strong>有人花半天驗證「C → JSON → Godot」在 macOS 和 Windows 都能跑。失敗就退守方案。</li>
+    <li><strong>GitHub issues:</strong> M0–M6 milestone + 每個 task 一張 issue（PM 已建好，請認領）。</li>
+    <li><strong>R2/R3 不在 GitHub 上開 issue</strong>，避免 backlog 暴增。先把 R1 跑完再回頭加。</li>
+  </ol>
+</div>
+
+<footer>
+  Generated for team review — 《失控視界 Unbounded Vision》 / 黑客松遊戲提案<br>
+  Workshop: <code>user-story-mapping-workshop</code> (Jeff Patton's method)
+</footer>
+
+</div>
+</body>
+</html>

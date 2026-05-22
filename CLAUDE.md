@@ -162,14 +162,72 @@ After any parallel session, run `/worktree-cleanup`.
 
 ---
 
-## Game Design (TBD)
+## Game Design — 《失控視界 Unbounded Vision》
 
-> This section is intentionally blank. Once the team agrees on the MVP concept, fill in:
-> - Core loop (what does the player do every 30 seconds?)
-> - Win/lose condition
-> - Scene list (main menu, gameplay, game over)
-> - Must-have mechanics for jam submission
-> - Cut list (things we explicitly are NOT building)
+> **Full Story Map**: see `game-plan.html` (team reference)
+> **Style Bible (R0 deliverable)**: see `docs/style-bible.md`
+
+### Core concept
+
+A 2D maze game built around a **reverse-reward** mechanic: the more "successful" the player is at normal game goals (open chests, solve puzzles, expand vision), the higher the **Instability** value rises, and the closer they get to a bad ending. **True victory = learning to stop expanding.**
+
+### Core loop (every 30 seconds)
+
+Explore in fog → see a tempting object (chest / key / vision core) → decide whether to interact → if interact: gain short-term benefit (e.g. vision 3×3 → 5×5) **but** Instability rises → maze starts to mutate (expand / walls move) → keep exploring under degraded conditions.
+
+### Win / Lose conditions
+
+| Ending | Trigger | Lose or Win |
+|--------|---------|-------------|
+| **Bad** | Instability reaches 100 | Maze expands infinitely, player trapped |
+| **Normal** | Instability < 70, reach the obvious "false" exit | Escape, but carry part of the maze with you |
+| **True** | Low instability, few interactions, find the hidden "true" exit | Player understood the theme: stop expanding |
+
+### Three core stats (visible in HUD)
+
+- **Vision** — sight radius (3×3 → 5×5 → 7×7 → 9×9)
+- **Achievement** — count of chests opened, puzzles solved, enemies killed
+- **Instability** — `vision×10 + chests×5 + puzzles×8 + enemies×3 + explored/10` (computed by the C module)
+
+### Loop-exit trigger (decided: option b)
+
+Instability ≥ 70 triggers a "critical state" event from the C module → Godot shows the UI text "邊界已記住你的貪婪" → both exits remain accessible from the start but the false one starts blinking. The player is **not** forced to a separate scene — the loop ends when they walk into either exit.
+
+### Scene list
+
+- `Maze.tscn` — gameplay TileMap, rendered from C-emitted JSON
+- `Player.tscn` — CharacterBody2D + Sprite + Camera2D
+- `Chest.tscn` / `Key.tscn` / `VisionCore.tscn` — interactable Area2D objects
+- `EndingBad.tscn` / `EndingNormal.tscn` / `EndingTrue.tscn` — three ending screens
+
+### Must-have mechanics for jam submission (R1 / Walking Skeleton)
+
+1. Player movement + 3×3 fog of war
+2. **C ↔ Godot JSON pipeline** (`maze_core` executable → `maze_state.json` → TileMap render)
+3. Chest / key / vision core spawn and pickup → vision expands
+4. **C module computes Instability** from current stats
+5. HUD shows three stats; Instability color shifts (green → yellow → orange → red)
+6. Instability ≥ 31 triggers maze expansion (C regenerates → Godot re-renders)
+7. Two exits visible from the start; reaching either triggers ending judgement
+8. Three ending text screens (text taken from PDF)
+
+### Cut list (NOT in MVP)
+
+- Main menu / settings / save system
+- Sound options, volume controls
+- Multiple maze layouts to choose from
+- Multiplayer
+- Tutorial overlay (rely on wall hints + in-game text instead)
+- Enemy combat (enemies exist as patrolling threats in R2, no health system)
+- Multiple chest tiers / inventory UI
+- Cinematics or extended ending sequences (R2/R3 only)
+
+### Personas (who we're designing for)
+
+- **黑客松評審** — needs to see technical highlight (C module + instability formula visualization) within 5 min demo
+- **一般玩家** — needs to feel the reversal "aha moment" naturally, without being told
+
+See `game-plan.html` for the full release breakdown (R0 Style Bible / R1 MVP / R2 enhancement / R3 polish) and milestones M0–M6.
 
 ---
 
