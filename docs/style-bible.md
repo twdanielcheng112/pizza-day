@@ -43,13 +43,14 @@ a pastel maze that watches you ruin yourself, one open door at a time.
 
 > How in-game text reads. Applies to: wall hints, UI prompts, ending screens, confirmation dialogs.
 
-**Style rules** (extracted from PDF, please confirm):
+**Style rules** (locked R0):
 
-- **Short sentences.** No paragraph-length narration.
-- **Second person.** "You opened all the doors." not "The player has opened…".
+- **Short sentences.** No paragraph-length narration. Canonical lines all fit in one breath.
+- **Second person.** 「你打開了所有門」，不是「玩家打開了所有門」。
 - **No explanation.** State the consequence; let the player figure out the cause.
-- **No exclamation marks.** Calm, observational tone.
-- **Chinese primary, English subtitle for technical terms** (e.g. "失控值 Instability") — confirm if we want full bilingual or 中文 only.
+- **No exclamation marks.** Calm, observational tone — the voice never raises itself.
+- **「邊界」 is a speaking subject, not inert geometry.** Grant it intent with verbs like 記住、推移、擴張、改寫. Avoid passive constructions ("the maze was changed"); the maze acts, the player is acted on.
+- **中文 primary, English only for stat/technical terms.** Stat labels are bilingual (「失控值 Instability」、「視野 Vision」、「成就 Achievement」) so jam judges can map the mechanic at a glance. Narrative text, wall hints, prompts, and ending lines stay **中文 only** — bilingual subtitles break the atmosphere.
 
 **Canonical examples** (from PDF):
 
@@ -195,6 +196,7 @@ By end of M0, the following must exist as actual files in the repo:
 Record any decision made during R0 here. Format: `[YYYY-MM-DD] decision — reason`.
 
 - `[2026-05-23]` Tone locked = "not-too-sweet cotton candy with quiet unease" (psychological-horror branch, OMORI visual register) — pre-commits §3 palette mood (pastel, low saturation) and §4 visual direction (OMORI-like soft pixel/flat) so T0.3 / T0.4 don't re-debate the surface feel. References: Inscryption, OMORI, Yume Nikki.
+- `[2026-05-23]` Voice locked = 中文 primary, English only on stat labels (失控值 Instability / 視野 Vision / 成就 Achievement). 「邊界」 is a speaking subject with agency. Affects HUD label widths (T0.5 font sizing must fit bilingual stat names) and all wall-hint / ending text (中文 only, no English subtitles).
 
 ---
 
