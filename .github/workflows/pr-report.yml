@@ -1,0 +1,45 @@
+name: PR Report
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Post PR report comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { execSync } = require('child_process');
+
+            const base = context.payload.pull_request.base.sha;
+            const head = context.payload.pull_request.head.sha;
+
+            const output = execSync(`git diff --name-only ${base} ${head}`).toString().trim();
+            const files = output.split('\n').filter(f => f);
+            const count = files.length;
+            const fileList = files.map(f => `- \`${f}\``).join('\n');
+
+            const body = [
+              '## PR Report',
+              '',
+              `Changed files (${count}):`,
+              fileList || '_(no files changed)_',
+            ].join('\n');
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body,
+            });
