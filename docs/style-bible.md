@@ -115,23 +115,20 @@ These drive the HUD edge effects and stat color. Must read at a glance and stay 
 
 > Pixel art? Vector? Hand-drawn? Decided here.
 
-**Style direction** (TBD):
+**Style direction:** **Pixel art**, pastel-tinted, soft shading — OMORI / Yume Nikki register. Inherits §1 ("cotton candy with quiet unease") and §8 frozen decision. Vector / flat rejected (loses pixel texture); hand-drawn rejected (not jam-friendly).
 
-- [ ] **Pixel art** — resolution: ____×____ per tile (16×16? 24×24? 32×32?)
-- [ ] **Vector / flat** — simple geometric shapes
-- [ ] **Hand-drawn** — high effort, usually not jam-friendly
+**2–3 reference images** (search keywords for the artist; replace with attached files once collected):
 
-**2–3 reference images** (paste links or attach files):
-
-1. `____________`
-2. `____________`
-3. `____________`
+1. **OMORI — WHITE SPACE / Headspace rooms** — pastel cream + mauve + coral interiors that read calm-yet-uncanny. Search: `omori whitespace tile` / `omori headspace screenshot`
+2. **Yume Nikki — Number Worlds / The Mall** — limited-palette dreamscapes; geometric tile repetition builds dread without detail. Search: `yume nikki number world tiles`
+3. **OneShot — Pepper's House / Glen** — pastel pixel exploration + melancholy isolation; same fog-of-war exploration mood as our maze. Search: `oneshot pepper's house pixel`
 
 **Resolution decisions:**
 
-- Window size: _____×_____
-- Tile size: ____ × ____
-- Map size: ____×____ tiles initial → expands to ____×____ at instability 100
+- Window size: **1280×720** (standard 720p — runs on any jam-judge machine)
+- Internal viewport: **640×360** (Godot pixel-perfect 2× integer scale to window)
+- Tile size: **24×24** source pixels (effective on-screen ≈ 48×48 after 2× scale)
+- Map size: initial **20×15 tiles** (fills the viewport so fog reads claustrophobic from the start) → expands to **~35×25 tiles** at instability 100 (camera follows the player beyond initial bounds). Treat these as R1 starting numbers — refine in playtest.
 
 ---
 
@@ -202,6 +199,7 @@ Record any decision made during R0 here. Format: `[YYYY-MM-DD] decision — reas
 - `[2026-05-23]` Tone locked = "not-too-sweet cotton candy with quiet unease" (psychological-horror branch, OMORI visual register) — pre-commits §3 palette mood (pastel, low saturation) and §4 visual direction (OMORI-like soft pixel/flat) so T0.3 / T0.4 don't re-debate the surface feel. References: Inscryption, OMORI, Yume Nikki.
 - `[2026-05-23]` Voice locked = 中文 primary, English only on stat labels (失控值 Instability / 視野 Vision / 成就 Achievement). 「邊界」 is a speaking subject with agency. Affects HUD label widths (T0.5 font sizing must fit bilingual stat names) and all wall-hint / ending text (中文 only, no English subtitles).
 - `[2026-05-23]` Palette locked = warm cream floor + muted mauve walls + plum-tinted fog (never pure black), with rewards in tempting peach and a deliberately low-presence faded-mint real exit. Instability stages span pale-sage → butter-yellow → dusty-coral → brick-red → oxblood, with **strictly monotonic decreasing luminance** (216 → 200 → 156 → 103 → 36) so the HUD reads under colorblind conditions. Saturation rises and value falls with instability — "color thickens" is the rule, do not invert.
+- `[2026-05-23]` Visual locked = pixel art at **24×24 source pixels**, rendered 2× via Godot pixel-perfect integer scaling into a **1280×720** window (640×360 internal viewport). Initial maze 20×15 tiles → expands to ~35×25 at instability 100. References: OMORI (WHITE SPACE / Headspace), Yume Nikki (Number Worlds), OneShot. Constrains M1 (TileMap cell size = 24), M2 (Camera2D zoom = 2, follows player), and the artist's tile authoring template.
 
 ---
 
