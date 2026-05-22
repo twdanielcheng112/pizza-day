@@ -20,19 +20,22 @@ If you find yourself adding "we should also decide X" to this doc and you're mor
 
 > One sentence + 3 reference games. Done in 30 minutes.
 
-**One-sentence positioning** (TBD):
+**One-sentence positioning:**
 
 ```
-The game feels like _________________________________________________________
+The game feels like not-too-sweet cotton candy with something quietly wrong inside —
+a pastel maze that watches you ruin yourself, one open door at a time.
 ```
 
-**3 reference games** (pick games whose mood/aesthetic we want to evoke; we are NOT copying gameplay):
+中文意譯：像不太甜的棉花糖，裡面藏著哪裡不對勁 — 一座柔和粉色的迷宮，安靜地看著你一扇門一扇門地把自己毀掉。
+
+**3 reference games** (mood/aesthetic only — we are NOT copying gameplay):
 
 | # | Game | What we steal |
 |---|------|---------------|
-| 1 | _e.g. INSIDE_ | _cold, minimalist atmosphere_ |
-| 2 | _e.g. Hyper Light Drifter_ | _pixel art with melancholy palette_ |
-| 3 | _e.g. Hollow Knight (early areas)_ | _quiet exploration tension_ |
+| 1 | **Inscryption** | The game itself warps as the player "succeeds" — same mechanical-horror DNA as our Instability system |
+| 2 | **OMORI** | Soft pastel palette + calm voice describing unsettling events — locks both visual register and writing tone |
+| 3 | **Yume Nikki** | Wordless dreamlike maze exploration with limited UI — matches our fog-of-war, walk-driven core loop |
 
 ---
 
@@ -191,8 +194,7 @@ By end of M0, the following must exist as actual files in the repo:
 
 Record any decision made during R0 here. Format: `[YYYY-MM-DD] decision — reason`.
 
-- `[2026-MM-DD]` ___
-- `[2026-MM-DD]` ___
+- `[2026-05-23]` Tone locked = "not-too-sweet cotton candy with quiet unease" (psychological-horror branch, OMORI visual register) — pre-commits §3 palette mood (pastel, low saturation) and §4 visual direction (OMORI-like soft pixel/flat) so T0.3 / T0.4 don't re-debate the surface feel. References: Inscryption, OMORI, Yume Nikki.
 
 ---
 
