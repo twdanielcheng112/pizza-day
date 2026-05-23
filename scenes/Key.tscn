@@ -1,14 +1,18 @@
 [gd_scene format=3 uid="uid://oycdld7ive0s"]
 
 [ext_resource type="Texture2D" path="res://assets/sprites/key.png" id="1_key"]
+[ext_resource type="Script" path="res://scripts/Key.gd" id="2_key_script"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_px33k"]
 size = Vector2(16, 16)
 
 [node name="Key" type="Area2D" unique_id=945707421]
+script = ExtResource("2_key_script")
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=103805895]
 texture = ExtResource("1_key")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=762706909]
 shape = SubResource("RectangleShape2D_px33k")
+
+[node name="SfxPlayer" type="AudioStreamPlayer" parent="." unique_id=328468174]
