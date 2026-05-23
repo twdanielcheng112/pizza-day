@@ -15,3 +15,5 @@
 
 # Dev-only scratch scenes (sprite previews, isolation tests, etc.)
 /scenes/dev/
+
+Agent.md
