@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://b34br7atrqtgv"]
 
-[ext_resource type="Texture2D" uid="uid://dovvsjokmgqgv" path="res://assets/sprites/exit_fake.png" id="1_core"]
+[ext_resource type="Texture2D" path="res://assets/sprites/vision_core.png" id="1_core"]
 [ext_resource type="Script" path="res://scripts/VisionCore.gd" id="2_core_script"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_ohneh"]
