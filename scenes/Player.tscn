@@ -10,3 +10,7 @@ script = ExtResource("1_script")
 texture = ExtResource("2_player")
 
 [node name="Camera2D" type="Camera2D" parent="."]
+limit_left = 0
+limit_top = 0
+limit_right = 504
+limit_bottom = 360
