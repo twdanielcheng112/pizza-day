@@ -3,10 +3,11 @@
 [ext_resource type="Script" uid="uid://brhubgpcd560" path="res://scripts/MazeBridge.gd" id="1_bridge"]
 [ext_resource type="TileSet" uid="uid://jv61e0n7roti" path="res://assets/tiles/maze_tileset.tres" id="2_tileset"]
 [ext_resource type="TileSet" uid="uid://r7m6ostoynd7" path="res://assets/tiles/fog_tileset.tres" id="3_fog"]
-[ext_resource type="AudioStream" uid="uid://chu4okxo7q70l" path="res://assets/audio/ambient_loop.ogg" id="4_audio"]
+[ext_resource type="AudioStream" uid="uid://do4h7dnxlgm7m" path="res://assets/audio/ambient_loop.ogg" id="4_audio"]
 [ext_resource type="Script" path="res://scripts/GameState.gd" id="5_game_state"]
 [ext_resource type="Script" path="res://scripts/HUD.gd" id="6_hud"]
 [ext_resource type="Script" path="res://scripts/CriticalEventController.gd" id="7_critical"]
+[ext_resource type="PackedScene" path="res://scenes/ui/EndingScreen.tscn" id="8_ending_screen"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hud_panel"]
 bg_color = Color(0.0470588, 0.0352941, 0.0588235, 0.48)
@@ -36,6 +37,9 @@ tile_set = ExtResource("3_fog")
 stream = ExtResource("4_audio")
 volume_db = -12.0
 autoplay = true
+
+[node name="EndingMusic" type="AudioStreamPlayer" parent="."]
+volume_db = -10.0
 
 [node name="HUD" type="CanvasLayer" parent="." unique_id=1873465040]
 script = ExtResource("6_hud")
@@ -68,3 +72,5 @@ text = "Instability: 10"
 
 [node name="WarningSfx" type="AudioStreamPlayer" parent="HUD" unique_id=1564172054]
 volume_db = -7.0
+
+[node name="EndingScreen" parent="." instance=ExtResource("8_ending_screen")]

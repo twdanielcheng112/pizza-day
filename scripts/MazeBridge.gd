@@ -22,6 +22,7 @@ const PLAYER_SPAWN := Vector2i(1, 1)
 const MEMORY_TRAIL_SIZE := 8  ## Number of past stepped cells that stay dim before fading to dark
 const EXPANSION_STAGE := 1
 const INTERACTABLE_SCRIPT := preload("res://scripts/Interactable.gd")
+const EXIT_SCRIPT := preload("res://scripts/Exit.gd")
 const OBJECT_SCENES := {
 	"chest": preload("res://scenes/Chest.tscn"),
 	"key": preload("res://scenes/Key.tscn"),
@@ -31,6 +32,35 @@ const EXIT_SCENES := {
 	"false": preload("res://scenes/ExitFalse.tscn"),
 	"true": preload("res://scenes/ExitTrue.tscn")
 }
+const EXIT_TYPE_FALSE := "false"
+const EXIT_TYPE_TRUE := "true"
+const RESTART_HINT := "按 R 再走一次"
+
+enum EndingType {
+	BAD,
+	NORMAL,
+	TRUE
+}
+
+const ENDING_TEXT := {
+	EndingType.BAD: {
+		"title": "迷宮留下了你",
+		"body": "你一直往前。牆也一直往前。最後，出口學會了把你忘記。"
+	},
+	EndingType.NORMAL: {
+		"title": "你走出去了",
+		"body": "門在身後關上。你聽見裡面還有腳步，像是你的。"
+	},
+	EndingType.TRUE: {
+		"title": "你沒有再拿",
+		"body": "迷宮等了一會兒。你沒有回答。於是它把真正的門還給你。"
+	}
+}
+const ENDING_MUSIC := {
+	EndingType.BAD: preload("res://assets/audio/endings/ending_bad.ogg"),
+	EndingType.NORMAL: preload("res://assets/audio/endings/ending_normal.ogg"),
+	EndingType.TRUE: preload("res://assets/audio/endings/ending_true.ogg")
+}
 
 @onready var tile_layer: TileMapLayer = $TileMapLayer
 @onready var fog_layer: TileMapLayer = $FogLayer
@@ -38,12 +68,16 @@ const EXIT_SCENES := {
 @onready var hud = $HUD
 @onready var objects_root: Node2D = get_node_or_null("Objects")
 @onready var critical_event_controller: Node = get_node_or_null("CriticalEventController")
+@onready var ambient_loop: AudioStreamPlayer = $AudioStreamPlayer
+@onready var ending_music: AudioStreamPlayer = $EndingMusic
+@onready var ending_screen: CanvasLayer = $EndingScreen
 
 var _maze: Dictionary
 var _trail: Array = []  ## FIFO of past player cells (Vector2i), oldest first
 var _last_center := Vector2i(-9999, -9999)  ## sentinel; first update_vision call won't push
 var _player: Node2D = null
 var _is_expanding := false
+var _is_game_over := false
 
 func _ready() -> void:
 	if game_state and hud:
@@ -57,6 +91,34 @@ func _ready() -> void:
 	_spawn_objects(_maze)
 	_spawn_player()
 
+func _input(event: InputEvent) -> void:
+	if not event is InputEventKey or not event.pressed or event.echo:
+		return
+
+	if OS.is_debug_build() and not _is_game_over:
+		match event.keycode:
+			KEY_7, KEY_F7:
+				show_ending(EndingType.BAD)
+				get_viewport().set_input_as_handled()
+				return
+			KEY_8:
+				show_ending(EndingType.NORMAL)
+				get_viewport().set_input_as_handled()
+				return
+			KEY_9:
+				show_ending(EndingType.TRUE)
+				get_viewport().set_input_as_handled()
+				return
+
+	if not _is_game_over:
+		return
+	if event.keycode == KEY_R:
+		get_viewport().set_input_as_handled()
+		get_tree().reload_current_scene()
+	elif event.keycode == KEY_ESCAPE:
+		get_viewport().set_input_as_handled()
+		get_tree().quit()
+
 func is_wall(cell: Vector2i) -> bool:
 	if _maze.is_empty():
 		return true
@@ -68,6 +130,8 @@ func is_wall(cell: Vector2i) -> bool:
 
 func update_vision(center: Vector2i, vision_radius: int) -> void:
 	if _maze.is_empty():
+		return
+	if _is_game_over:
 		return
 	if game_state and game_state.mark_explored(center):
 		_refresh_instability_stats()
@@ -106,18 +170,50 @@ func get_vision_core_count() -> int:
 	return 0
 
 func on_chest_opened() -> void:
-	if not game_state:
+	if _is_game_over or not game_state:
 		return
 	if game_state.has_method("apply_chest_open"):
 		game_state.apply_chest_open()
 	_refresh_instability_stats()
 
 func on_vision_core_picked() -> void:
-	if not game_state:
+	if _is_game_over or not game_state:
 		return
 	if game_state.has_method("apply_vision_core_pickup"):
 		game_state.apply_vision_core_pickup()
 	_refresh_instability_stats()
+
+func on_exit_interacted(exit_type: String) -> void:
+	if _is_game_over:
+		return
+	if exit_type.is_empty():
+		return
+	show_ending(judge_ending(exit_type, _current_instability()))
+
+func judge_ending(exit_type: String, instability: int) -> EndingType:
+	if instability >= 100:
+		return EndingType.BAD
+	if exit_type == EXIT_TYPE_FALSE:
+		return EndingType.NORMAL
+	if exit_type == EXIT_TYPE_TRUE and instability < 70:
+		return EndingType.TRUE
+	return EndingType.NORMAL
+
+func show_ending(ending: EndingType) -> void:
+	if _is_game_over:
+		return
+	_is_game_over = true
+
+	if is_instance_valid(_player):
+		_player.set_process(false)
+		_player.set_process_input(false)
+		_player.set_process_unhandled_input(false)
+		_player.set_physics_process(false)
+
+	var data: Dictionary = ENDING_TEXT.get(ending, ENDING_TEXT[EndingType.NORMAL])
+	if ending_screen and ending_screen.has_method("show_ending"):
+		ending_screen.show_ending(String(data["title"]), String(data["body"]), RESTART_HINT)
+	_play_ending_music(ending)
 
 func _is_in_bounds(cell: Vector2i) -> bool:
 	if _maze.is_empty():
@@ -267,10 +363,13 @@ func _spawn_objects(maze: Dictionary) -> void:
 		if scene == null:
 			continue
 		var node := scene.instantiate()
+		if obj_type == "exit":
+			node.set_script(EXIT_SCRIPT)
+			node.set("exit_type", exit_type)
 		_prepare_interactable(node)
 		var cell := Vector2i(int(obj.get("x", 0)), int(obj.get("y", 0)))
 		node.position = _cell_to_world(cell)
-		if obj_type == "exit" and exit_type == "false":
+		if obj_type == "exit" and exit_type == EXIT_TYPE_FALSE:
 			node.add_to_group("false_exit")
 		objects_root.add_child(node)
 
@@ -302,7 +401,7 @@ func _load_initial_stats(maze: Dictionary) -> void:
 	)
 
 func _refresh_instability_stats() -> void:
-	if not game_state:
+	if _is_game_over or not game_state:
 		return
 	var core_stats: Dictionary = game_state.to_core_stats()
 	core_stats["previous_instability"] = int(game_state.get("instability"))
@@ -316,6 +415,9 @@ func _refresh_instability_stats() -> void:
 		int(events.get("instability_stage", 0)),
 		bool(events.get("critical_state", false))
 	)
+	if _current_instability() >= 100:
+		show_ending(EndingType.BAD)
+		return
 	if bool(events.get("critical_event_triggered", false)):
 		_trigger_critical_sequence()
 	elif bool(events.get("critical_state", false)):
@@ -323,7 +425,7 @@ func _refresh_instability_stats() -> void:
 	_try_expand_maze(int(events.get("instability_stage", 0)))
 
 func _try_expand_maze(instability_stage: int) -> void:
-	if _is_expanding or instability_stage < EXPANSION_STAGE:
+	if _is_game_over or _is_expanding or instability_stage < EXPANSION_STAGE:
 		return
 	if int(_maze.get("expansion_level", 0)) >= 1:
 		return
@@ -406,6 +508,22 @@ func _play_expansion_feedback() -> void:
 		_player.play_expansion_camera_feedback()
 	if hud and hud.has_method("show_expansion_feedback"):
 		hud.show_expansion_feedback()
+
+func _current_instability() -> int:
+	if game_state == null:
+		return 0
+	return int(game_state.get("instability"))
+
+func _play_ending_music(ending: EndingType) -> void:
+	if ambient_loop:
+		ambient_loop.stop()
+	if ending_music == null:
+		return
+	var stream: AudioStream = ENDING_MUSIC.get(ending, null)
+	if stream == null:
+		return
+	ending_music.stream = stream
+	ending_music.play()
 
 func _prepare_interactable(node: Node) -> void:
 	if node == null:

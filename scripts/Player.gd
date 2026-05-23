@@ -155,5 +155,9 @@ func on_vision_core_picked() -> void:
 	var radius := _current_vision_radius()
 	print("vision core picked: count=%d, vision=%dx%d" % [core_count, radius * 2 + 1, radius * 2 + 1])
 
+func on_exit_interacted(exit_type: String) -> void:
+	if maze and maze.has_method("on_exit_interacted"):
+		maze.on_exit_interacted(exit_type)
+
 func _world_to_cell(world_pos: Vector2) -> Vector2i:
 	return Vector2i(int(floor(world_pos.x / CELL_SIZE)), int(floor(world_pos.y / CELL_SIZE)))
