@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://dbrytikj26uw"]
+[gd_scene format=3 uid="uid://b1yd8jelpr1kw"]
 
 [ext_resource type="Script" uid="uid://brhubgpcd560" path="res://scripts/MazeBridge.gd" id="1_bridge"]
 [ext_resource type="TileSet" uid="uid://jv61e0n7roti" path="res://assets/tiles/maze_tileset.tres" id="2_tileset"]
@@ -10,6 +10,8 @@ script = ExtResource("1_bridge")
 
 [node name="TileMapLayer" type="TileMapLayer" parent="." unique_id=2012640390]
 tile_set = ExtResource("2_tileset")
+
+[node name="Objects" type="Node2D" parent="." unique_id=173910919]
 
 [node name="FogLayer" type="TileMapLayer" parent="." unique_id=1859054612]
 tile_set = ExtResource("3_fog")

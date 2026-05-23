@@ -1,0 +1,13 @@
+[gd_scene format=3 uid="uid://oycdld7ive0s"]
+
+[ext_resource type="Texture2D" uid="uid://xdp4ythw2ha5" path="res://assets/sprites/exit_real.png" id="1_key"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_px33k"]
+
+[node name="Area2D" type="Area2D" unique_id=945707421]
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=103805895]
+texture = ExtResource("1_key")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=762706909]
+shape = SubResource("RectangleShape2D_px33k")

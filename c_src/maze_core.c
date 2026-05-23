@@ -18,7 +18,8 @@
  *     "width":  <int>,
  *     "height": <int>,
  *     "seed":   <uint>,
- *     "tiles":  [[<int>, ...], ...]   // 0 = floor, 1 = wall, row-major
+ *     "tiles":  [[<int>, ...], ...],  // 0 = floor, 1 = wall, row-major
+ *     "objects": [{"type":"chest|key|vision_core", "x": <int>, "y": <int>}, ...]
  *   }
  */
 
@@ -35,7 +36,22 @@
 #define TILE_FLOOR 0
 #define TILE_WALL  1
 
+#define CHEST_COUNT 2
+#define KEY_COUNT 1
+#define CORE_COUNT 3
+#define MAX_OBJECTS 16
+
 static int grid[MAZE_H][MAZE_W];
+
+typedef struct {
+    const char *type;
+    int x;
+    int y;
+} MazeObject;
+
+static MazeObject objects[MAX_OBJECTS];
+static int object_count = 0;
+static int occupied[MAZE_H][MAZE_W];
 
 static const int DX[4] = { 0,  0,  1, -1};
 static const int DY[4] = { 1, -1,  0,  0};
@@ -68,6 +84,37 @@ static void carve(int cx, int cy) {
     }
 }
 
+static int try_place_object(const char *type, int attempts) {
+    for (int i = 0; i < attempts; ++i) {
+        int x = rand() % MAZE_W;
+        int y = rand() % MAZE_H;
+        if (grid[y][x] != TILE_FLOOR) continue;
+        if (occupied[y][x]) continue;
+        if (x == 1 && y == 1) continue;
+        if (object_count >= MAX_OBJECTS) return 0;
+        objects[object_count++] = (MazeObject){type, x, y};
+        occupied[y][x] = 1;
+        return 1;
+    }
+    return 0;
+}
+
+static void place_objects(void) {
+    object_count = 0;
+    memset(occupied, 0, sizeof(occupied));
+    occupied[1][1] = 1;
+
+    for (int i = 0; i < CHEST_COUNT; ++i) {
+        try_place_object("chest", 200);
+    }
+    for (int i = 0; i < KEY_COUNT; ++i) {
+        try_place_object("key", 200);
+    }
+    for (int i = 0; i < CORE_COUNT; ++i) {
+        try_place_object("vision_core", 200);
+    }
+}
+
 static int write_json(const char *path, unsigned int seed) {
     FILE *f = fopen(path, "w");
     if (!f) {
@@ -95,6 +142,13 @@ static int write_json(const char *path, unsigned int seed) {
         fputc('\n', f);
     }
 
+    fprintf(f, "  ],\n  \"objects\": [\n");
+    for (int i = 0; i < object_count; ++i) {
+        fprintf(f, "    {\"type\":\"%s\",\"x\":%d,\"y\":%d}",
+            objects[i].type, objects[i].x, objects[i].y);
+        if (i != object_count - 1) fputc(',', f);
+        fputc('\n', f);
+    }
     fprintf(f, "  ]\n}\n");
     fclose(f);
     return 0;
@@ -118,6 +172,7 @@ int main(int argc, char **argv) {
     }
 
     carve(0, 0);
+    place_objects();
 
     return write_json(out_path, seed);
 }
