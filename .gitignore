@@ -12,3 +12,6 @@
 
 # Claude Code — per-developer local settings (do not commit)
 .claude/settings.local.json
+
+# Dev-only scratch scenes (sprite previews, isolation tests, etc.)
+/scenes/dev/
