@@ -85,6 +85,7 @@ var _player: Node2D = null
 var _is_expanding := false
 var _is_game_over := false
 var _consumed_object_keys: Dictionary = {}
+var _has_key := false
 
 func _ready() -> void:
 	if game_state and hud:
@@ -176,6 +177,9 @@ func get_vision_core_count() -> int:
 		return game_state.get_vision_core_count()
 	return 0
 
+func has_key() -> bool:
+	return _has_key
+
 func on_chest_opened(source: Node = null) -> void:
 	if _is_game_over or not game_state:
 		return
@@ -187,6 +191,7 @@ func on_chest_opened(source: Node = null) -> void:
 func on_key_picked(source: Node = null) -> void:
 	if _is_game_over:
 		return
+	_has_key = true
 	_mark_object_consumed(source)
 
 func on_vision_core_picked(source: Node = null) -> void:

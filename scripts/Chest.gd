@@ -18,6 +18,9 @@ func _ready() -> void:
 func interact(player: Node = null) -> void:
 	if _is_open:
 		return
+	if not _can_open(player):
+		print("chest locked: key required")
+		return
 
 	_is_open = true
 
@@ -31,6 +34,11 @@ func interact(player: Node = null) -> void:
 		player.on_chest_opened(self)
 
 	_play_open_sfx()
+
+func _can_open(player: Node) -> bool:
+	if player == null or not player.has_method("can_open_chest"):
+		return false
+	return bool(player.can_open_chest())
 
 func _setup_sfx_player() -> void:
 	if _sfx_player == null:

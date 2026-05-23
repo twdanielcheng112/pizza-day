@@ -145,6 +145,11 @@ func on_chest_opened(source: Node = null) -> void:
 		maze.on_chest_opened(source)
 	_refresh_vision()
 
+func can_open_chest() -> bool:
+	if maze and maze.has_method("has_key"):
+		return bool(maze.has_key())
+	return false
+
 func on_key_picked(source: Node = null) -> void:
 	if maze and maze.has_method("on_key_picked"):
 		maze.on_key_picked(source)
