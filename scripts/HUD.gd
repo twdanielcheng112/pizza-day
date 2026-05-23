@@ -2,13 +2,15 @@ extends CanvasLayer
 ##
 ## M4 HUD for Vision / Achievement / Instability.
 ##
-## Also owns the one-shot generated warning tone when instability crosses a
-## higher stage threshold.
+## Also owns the one-shot warning stings when instability crosses a higher
+## stage threshold.
 
-const WARNING_MIX_RATE := 22050
-const WARNING_DURATION := 0.64
-const WARNING_VOLUME := 0.24
 const CRITICAL_MESSAGE := "The boundary remembers your greed."
+const WARNING_STINGS := {
+	1: preload("res://assets/audio/stings/sting_stage1.ogg"),
+	2: preload("res://assets/audio/stings/sting_stage2.ogg"),
+	3: preload("res://assets/audio/stings/sting_stage3.ogg"),
+}
 
 @onready var vision_label: Label = $Panel/StatsBox/VisionLabel
 @onready var achievement_label: Label = $Panel/StatsBox/AchievementLabel
@@ -22,10 +24,6 @@ var _critical_label: Label = null
 var _critical_flash: ColorRect = null
 
 func _ready() -> void:
-	var generator := AudioStreamGenerator.new()
-	generator.mix_rate = WARNING_MIX_RATE
-	generator.buffer_length = WARNING_DURATION
-	warning_sfx.stream = generator
 	_create_critical_flash()
 	_create_critical_label()
 	_create_expansion_flash()
@@ -49,7 +47,6 @@ func show_critical_sequence() -> void:
 	_critical_label.text = CRITICAL_MESSAGE
 	_critical_label.visible = true
 	_critical_label.modulate = Color(1.0, 0.2, 0.16, 1.0)
-	_play_warning_sfx(3)
 
 	var base_position := _critical_label.position
 	var tween := create_tween()
@@ -72,30 +69,12 @@ func _get_instability_color(value: int) -> Color:
 	return Color(0.35, 0.86, 0.45)
 
 func _play_warning_sfx(stage: int) -> void:
-	warning_sfx.play()
-	var playback := warning_sfx.get_stream_playback() as AudioStreamGeneratorPlayback
-	if playback == null:
+	var stream: AudioStream = WARNING_STINGS.get(stage, null)
+	if stream == null:
 		return
-
-	var frame_count := int(WARNING_DURATION * WARNING_MIX_RATE)
-	var pulse_count: int = clampi(stage + 1, 2, 4)
-	var low_frequency := 420.0 + float(stage) * 90.0
-	var high_frequency := 760.0 + float(stage) * 150.0
-	for i in frame_count:
-		var t: float = float(i) / float(WARNING_MIX_RATE)
-		var progress: float = float(i) / float(frame_count)
-		var pulse_phase: float = fmod(progress * float(pulse_count), 1.0)
-		var gate: float = 1.0 if pulse_phase < 0.58 else 0.0
-		var sweep: float = 1.0 - pulse_phase
-		var frequency: float = lerpf(low_frequency, high_frequency, sweep)
-		var attack: float = minf(pulse_phase / 0.08, 1.0)
-		var release: float = minf((0.58 - pulse_phase) / 0.16, 1.0)
-		var envelope: float = clampf(minf(attack, release), 0.0, 1.0) * gate
-		var sine: float = sin(TAU * frequency * t)
-		var square: float = 1.0 if sine >= 0.0 else -1.0
-		var harmonic: float = sin(TAU * frequency * 1.5 * t) * 0.28
-		var sample: float = ((sine * 0.5) + (square * 0.34) + harmonic) * WARNING_VOLUME * envelope
-		playback.push_frame(Vector2(sample, sample))
+	warning_sfx.stop()
+	warning_sfx.stream = stream
+	warning_sfx.play()
 
 func show_expansion_feedback() -> void:
 	if _expansion_label == null:
