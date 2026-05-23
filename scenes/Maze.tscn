@@ -7,6 +7,13 @@
 [ext_resource type="Script" path="res://scripts/GameState.gd" id="5_game_state"]
 [ext_resource type="Script" path="res://scripts/HUD.gd" id="6_hud"]
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hud_panel"]
+bg_color = Color(0.0470588, 0.0352941, 0.0588235, 0.48)
+content_margin_left = 0.0
+content_margin_top = 0.0
+content_margin_right = 0.0
+content_margin_bottom = 0.0
+
 [node name="Maze" type="Node2D" unique_id=721190233]
 script = ExtResource("1_bridge")
 
@@ -32,23 +39,27 @@ script = ExtResource("6_hud")
 [node name="Panel" type="Panel" parent="HUD" unique_id=1120426485]
 offset_left = 8.0
 offset_top = 8.0
-offset_right = 184.0
-offset_bottom = 82.0
+offset_right = 142.0
+offset_bottom = 58.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_hud_panel")
 
 [node name="StatsBox" type="VBoxContainer" parent="HUD/Panel" unique_id=2026210365]
-offset_left = 10.0
-offset_top = 8.0
-offset_right = 166.0
-offset_bottom = 66.0
-theme_override_constants/separation = 2
+offset_left = 7.0
+offset_top = 5.0
+offset_right = 127.0
+offset_bottom = 45.0
+theme_override_constants/separation = 0
 
 [node name="VisionLabel" type="Label" parent="HUD/Panel/StatsBox" unique_id=1547280723]
+theme_override_font_sizes/font_size = 11
 text = "Vision: 3x3"
 
 [node name="AchievementLabel" type="Label" parent="HUD/Panel/StatsBox" unique_id=607620680]
+theme_override_font_sizes/font_size = 11
 text = "Achievement: 0"
 
 [node name="InstabilityLabel" type="Label" parent="HUD/Panel/StatsBox" unique_id=1473264868]
+theme_override_font_sizes/font_size = 11
 text = "Instability: 10"
 
 [node name="WarningSfx" type="AudioStreamPlayer" parent="HUD" unique_id=1564172054]
