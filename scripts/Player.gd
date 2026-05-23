@@ -1,17 +1,21 @@
 extends Node2D
 ##
-## M2 — grid-snap player movement.
+## M2 grid-snap player movement.
 ## Owns the player's cell coordinate, renders centered in that cell, and asks
 ## the parent (MazeBridge) whether a target cell is walkable before moving.
 ## Notifies the parent after moving so fog can be updated.
 
 const CELL_SIZE := 24
-const VISION_RADIUS := 1  ## 3×3 means center ± 1
+const MIN_VISION_RADIUS := 1  ## 3x3
+const MAX_VISION_RADIUS := 4  ## 9x9
 const INTERACT_RANGE := 0
 
 @export var cell: Vector2i = Vector2i(1, 1)
 
 @onready var maze: Node2D = get_parent()
+
+var vision_radius: int = MIN_VISION_RADIUS
+var chest_count: int = 0
 
 var _nearest_interactable: Node = null
 var _hint_label: Label = null
@@ -21,7 +25,7 @@ func _ready() -> void:
 	_create_hint()
 	_update_interaction_hint()
 	if maze and maze.has_method("update_vision"):
-		maze.update_vision(cell, VISION_RADIUS)
+		maze.update_vision(cell, vision_radius)
 
 func _process(_delta: float) -> void:
 	_update_interaction_hint()
@@ -53,7 +57,7 @@ func _try_move(dir: Vector2i) -> void:
 	_snap_to_cell()
 	_update_interaction_hint()
 	if maze and maze.has_method("update_vision"):
-		maze.update_vision(cell, VISION_RADIUS)
+		maze.update_vision(cell, vision_radius)
 
 func _snap_to_cell() -> void:
 	position = Vector2(cell.x * CELL_SIZE + CELL_SIZE / 2.0, cell.y * CELL_SIZE + CELL_SIZE / 2.0)
@@ -97,6 +101,14 @@ func _try_interact() -> void:
 		return
 	if _nearest_interactable.has_method("interact"):
 		_nearest_interactable.interact(self)
+		_update_interaction_hint()
+
+func on_chest_opened() -> void:
+	chest_count += 1
+	vision_radius = min(vision_radius + 1, MAX_VISION_RADIUS)
+	if maze and maze.has_method("update_vision"):
+		maze.update_vision(cell, vision_radius)
+	print("chest opened: count=%d, vision=%dx%d" % [chest_count, vision_radius * 2 + 1, vision_radius * 2 + 1])
 
 func _world_to_cell(world_pos: Vector2) -> Vector2i:
 	return Vector2i(int(floor(world_pos.x / CELL_SIZE)), int(floor(world_pos.y / CELL_SIZE)))
