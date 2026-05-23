@@ -7,18 +7,30 @@ extends Node2D
 
 const CELL_SIZE := 24
 const VISION_RADIUS := 1  ## 3×3 means center ± 1
+const INTERACT_RANGE := 0
 
 @export var cell: Vector2i = Vector2i(1, 1)
 
 @onready var maze: Node2D = get_parent()
 
+var _nearest_interactable: Node = null
+var _hint_label: Label = null
+
 func _ready() -> void:
 	_snap_to_cell()
+	_create_hint()
+	_update_interaction_hint()
 	if maze and maze.has_method("update_vision"):
 		maze.update_vision(cell, VISION_RADIUS)
 
+func _process(_delta: float) -> void:
+	_update_interaction_hint()
+
 func _unhandled_input(event: InputEvent) -> void:
 	if not event is InputEventKey or not event.pressed or event.echo:
+		return
+	if event.keycode == KEY_E:
+		_try_interact()
 		return
 	var dir := _input_direction(event)
 	if dir == Vector2i.ZERO:
@@ -39,8 +51,52 @@ func _try_move(dir: Vector2i) -> void:
 		return
 	cell = target
 	_snap_to_cell()
+	_update_interaction_hint()
 	if maze and maze.has_method("update_vision"):
 		maze.update_vision(cell, VISION_RADIUS)
 
 func _snap_to_cell() -> void:
 	position = Vector2(cell.x * CELL_SIZE + CELL_SIZE / 2.0, cell.y * CELL_SIZE + CELL_SIZE / 2.0)
+
+func _create_hint() -> void:
+	_hint_label = Label.new()
+	_hint_label.text = "E"
+	_hint_label.visible = false
+	_hint_label.z_index = 10
+	_hint_label.position = Vector2(-6, -24)
+	_hint_label.size = Vector2(12, 12)
+	_hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_hint_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	add_child(_hint_label)
+
+func _update_interaction_hint() -> void:
+	_nearest_interactable = _find_nearest_interactable()
+	if _hint_label:
+		_hint_label.visible = _nearest_interactable != null
+
+func _find_nearest_interactable() -> Node:
+	var nodes: Array = get_tree().get_nodes_in_group("interactable")
+	var best: Node = null
+	var best_dist: int = 999
+	for node in nodes:
+		if not is_instance_valid(node):
+			continue
+		var obj_cell := _world_to_cell(node.global_position)
+		var dx: int = abs(obj_cell.x - cell.x)
+		var dy: int = abs(obj_cell.y - cell.y)
+		if max(dx, dy) > INTERACT_RANGE:
+			continue
+		var dist: int = dx + dy
+		if dist < best_dist:
+			best_dist = dist
+			best = node
+	return best
+
+func _try_interact() -> void:
+	if _nearest_interactable == null:
+		return
+	if _nearest_interactable.has_method("interact"):
+		_nearest_interactable.interact(self)
+
+func _world_to_cell(world_pos: Vector2) -> Vector2i:
+	return Vector2i(int(floor(world_pos.x / CELL_SIZE)), int(floor(world_pos.y / CELL_SIZE)))

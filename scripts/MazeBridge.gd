@@ -20,6 +20,7 @@ const FOG_DARK_SOURCE := 1
 const PLAYER_SCENE := preload("res://scenes/Player.tscn")
 const PLAYER_SPAWN := Vector2i(1, 1)
 const MEMORY_TRAIL_SIZE := 8  ## Number of past stepped cells that stay dim before fading to dark
+const INTERACTABLE_SCRIPT := preload("res://scripts/Interactable.gd")
 const OBJECT_SCENES := {
 	"chest": preload("res://scenes/Chest.tscn"),
 	"key": preload("res://scenes/Key.tscn"),
@@ -155,8 +156,7 @@ func _spawn_objects(maze: Dictionary) -> void:
 		if scene == null:
 			continue
 		var node := scene.instantiate()
-		if obj_type == "exit":
-			node.set_meta("exit_type", exit_type)
+		_prepare_interactable(node)
 		var cell := Vector2i(int(obj.get("x", 0)), int(obj.get("y", 0)))
 		node.position = _cell_to_world(cell)
 		objects_root.add_child(node)
@@ -178,3 +178,11 @@ func _spawn_player() -> void:
 func _cell_to_world(cell: Vector2i) -> Vector2:
 	var size := tile_layer.tile_set.tile_size
 	return Vector2(cell.x * size.x + size.x * 0.5, cell.y * size.y + size.y * 0.5)
+
+func _prepare_interactable(node: Node) -> void:
+	if node == null:
+		return
+	if not node.is_in_group("interactable"):
+		node.add_to_group("interactable")
+	if not node.has_method("interact") and node.get_script() == null:
+		node.set_script(INTERACTABLE_SCRIPT)
