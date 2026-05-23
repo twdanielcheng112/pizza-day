@@ -15,7 +15,7 @@ const VISION_RADIUS := 1  ## 3×3 means center ± 1
 func _ready() -> void:
 	_snap_to_cell()
 	if maze and maze.has_method("update_vision"):
-		maze.update_vision(cell, VISION_RADIUS)
+		maze.update_vision(cell, _current_vision_radius())
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not event is InputEventKey or not event.pressed or event.echo:
@@ -40,7 +40,12 @@ func _try_move(dir: Vector2i) -> void:
 	cell = target
 	_snap_to_cell()
 	if maze and maze.has_method("update_vision"):
-		maze.update_vision(cell, VISION_RADIUS)
+		maze.update_vision(cell, _current_vision_radius())
 
 func _snap_to_cell() -> void:
 	position = Vector2(cell.x * CELL_SIZE + CELL_SIZE / 2.0, cell.y * CELL_SIZE + CELL_SIZE / 2.0)
+
+func _current_vision_radius() -> int:
+	if maze and maze.has_method("get_vision_radius"):
+		return maze.get_vision_radius()
+	return VISION_RADIUS
