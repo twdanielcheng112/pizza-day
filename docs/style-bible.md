@@ -155,29 +155,32 @@ These drive the HUD edge effects and stat color. Must read at a glance and stay 
 
 > One sentence + one reference track.
 
-**One-sentence direction** (TBD):
+**One-sentence direction:**
 
 ```
-The music feels like __________________________________________________________
+The music feels like a soft drone that thickens as the maze remembers more of you —
+calm at start, dissonant by the time you stop being able to leave.
 ```
 
-**Reference track** (link or describe):
+中文意譯：像一條柔和的低音持續鳴響，隨著迷宮「記住」你越多而逐漸變濃；起初平靜，到你發現出不去時已經不和諧。
 
-```
-__________________________________________________________
-```
+**Reference track:** **OMORI — "WHITE SPACE"** (Pedro Silva). Sparse piano motif over a sustained tone — reads calm-yet-uncanny, already paired with the OMORI WHITE SPACE visual reference in §4 (visual + audio reinforce the same room). Search: `omori white space ost`. Alternates considered: Yume Nikki — "Mansion" (closer to dread, loses calmness); Inscryption — "Wood Carver's Cabin" (calmer but too acoustic-warm).
 
-**Cue list** (what music we actually need for MVP):
+**Audio analog of §3's "color thickens" rule:** as instability rises, the ambient layer gains **dissonance, not loudness**. Stings DO NOT crescendo — they introduce wrongness at the same volume as everything else. The musician must **never** reach for an alarm sound; the calmest possible voice describes the worst thing happening (matches §2's "no exclamation marks").
 
-| Cue | When | Length | Style |
-|-----|------|--------|-------|
-| Ambient loop (gameplay) | Whole game | ~60s loop | Calm, drone-y |
-| Instability sting — Stage 1 (≥31) | One-shot at first trigger | ~3s | Subtle warning |
-| Instability sting — Stage 2 (≥61) | One-shot at first trigger | ~3s | Tense, dissonant |
-| Instability sting — Stage 3 (≥81) | One-shot at first trigger | ~3s | Alarming |
-| Bad ending music | Ending screen | ~20s | Final, oppressive |
-| Normal ending music | Ending screen | ~20s | Bittersweet |
-| True ending music | Ending screen | ~20s | Calm, resolved |
+**Cue list** (MVP — 7 cues total):
+
+| # | Cue | When | Length | Style |
+|---|-----|------|--------|-------|
+| 1 | Ambient loop (gameplay) | Whole game | ~60s seamless loop | Single sustained pastel drone + minimal piano motif. No percussion. |
+| 2 | Sting — Stage 1 (≥31, 擴張) | One-shot on first crossing | ~3s | Single pitch-bent piano note; "noted" feel |
+| 3 | Sting — Stage 2 (≥61, 扭曲) | One-shot on first crossing | ~3s | Two notes a semitone apart, hold + fade; dissonant against ambient |
+| 4 | Sting — Stage 3 (≥81, 崩壞) | One-shot on first crossing | ~3s | Ambient motif transposed down a half-step, layered **over** the existing loop without replacing it |
+| 5 | Bad ending music (EndingBad) | Ending screen | ~20s | Low cello + inverted ambient motif; ends on an unresolved chord |
+| 6 | Normal ending music (EndingNormal) | Ending screen | ~20s | Ambient motif slowed and raised one octave; bittersweet, "the room feels emptier" |
+| 7 | True ending music (EndingTrue) | Ending screen | ~20s | Same motif plays through cleanly for the first time; ends in silence |
+
+> **Hard rule:** no cue may use exclamatory dynamics. The voice is calm even when the world is collapsing.
 
 ---
 
@@ -205,6 +208,7 @@ Record any decision made during R0 here. Format: `[YYYY-MM-DD] decision — reas
 - `[2026-05-23]` Palette locked = warm cream floor + muted mauve walls + plum-tinted fog (never pure black), with rewards in tempting peach and a deliberately low-presence faded-mint real exit. Instability stages span pale-sage → butter-yellow → dusty-coral → brick-red → oxblood, with **strictly monotonic decreasing luminance** (216 → 200 → 156 → 103 → 36) so the HUD reads under colorblind conditions. Saturation rises and value falls with instability — "color thickens" is the rule, do not invert.
 - `[2026-05-23]` Visual locked = pixel art at **24×24 source pixels**, rendered 2× via Godot pixel-perfect integer scaling into a **1280×720** window (640×360 internal viewport). Initial maze 20×15 tiles → expands to ~35×25 at instability 100. References: OMORI (WHITE SPACE / Headspace), Yume Nikki (Number Worlds), OneShot. Constrains M1 (TileMap cell size = 24), M2 (Camera2D zoom = 2, follows player), and the artist's tile authoring template.
 - `[2026-05-23]` Fonts locked = **Source Han Serif TC** (中文 body + ending, 明體 chosen over 黑體 for literary "quiet observer" register) + **Inter** (English body) + **JetBrains Mono** (HUD numbers, heavy weights remain legible under brick/oxblood). All SIL OFL 1.1 — jam-safe, no attribution gymnastics. Body and ending share one CJK family at different weights to keep loaded-font footprint small.
+- `[2026-05-23]` Music locked = soft drone + minimal piano motif (OMORI "WHITE SPACE" register), thickening with instability via **dissonance, not loudness** — direct audio analog of §3's "color thickens" rule and §2's "no exclamation marks". 7-cue MVP list: 1 ambient loop + 3 instability stings (stages 1/2/3) + 3 ending pieces. **Hard rule for the composer:** no cue may use crescendo / alarm dynamics; the calmest possible voice describes the worst thing happening.
 
 ---
 
