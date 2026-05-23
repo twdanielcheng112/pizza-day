@@ -4,7 +4,7 @@ extends Node
 ##
 ## Kept as a scene-local node so the maze owns this run's volatile stats.
 
-signal stats_changed(vision_label: String, achievement: int, instability: int, stage: int)
+signal stats_changed(vision_label: String, achievement: int, instability: int, stage: int, critical_state: bool)
 
 const MIN_VISION_LEVEL := 1  ## 3x3
 const MAX_VISION_LEVEL := 4  ## 9x9
@@ -17,10 +17,11 @@ var defeated_enemies: int = 0
 var explored_tiles: int = 0
 var instability: int = 0
 var instability_stage: int = 0
+var critical_state: bool = false
 
 var _explored_cells: Dictionary = {}
 
-func reset_from_core(stats: Dictionary, stage: int) -> void:
+func reset_from_core(stats: Dictionary, stage: int, is_critical: bool = false) -> void:
 	vision_level = int(clamp(int(stats.get("vision", vision_level)), MIN_VISION_LEVEL, MAX_VISION_LEVEL))
 	opened_chests = int(stats.get("chests", opened_chests))
 	picked_vision_cores = 0
@@ -29,10 +30,11 @@ func reset_from_core(stats: Dictionary, stage: int) -> void:
 	explored_tiles = int(stats.get("explored", explored_tiles))
 	instability = int(stats.get("instability", instability))
 	instability_stage = stage
+	critical_state = is_critical
 	_explored_cells.clear()
 	_emit_stats_changed()
 
-func apply_core_result(stats: Dictionary, stage: int) -> void:
+func apply_core_result(stats: Dictionary, stage: int, is_critical: bool = false) -> void:
 	vision_level = int(clamp(int(stats.get("vision", vision_level)), MIN_VISION_LEVEL, MAX_VISION_LEVEL))
 	opened_chests = int(stats.get("chests", opened_chests))
 	solved_puzzles = int(stats.get("puzzles", solved_puzzles))
@@ -40,6 +42,7 @@ func apply_core_result(stats: Dictionary, stage: int) -> void:
 	explored_tiles = int(stats.get("explored", explored_tiles))
 	instability = int(stats.get("instability", instability))
 	instability_stage = stage
+	critical_state = is_critical
 	_emit_stats_changed()
 
 func mark_explored(cell: Vector2i) -> bool:
@@ -80,4 +83,4 @@ func to_core_stats() -> Dictionary:
 	}
 
 func _emit_stats_changed() -> void:
-	stats_changed.emit(get_vision_label(), get_achievement(), instability, instability_stage)
+	stats_changed.emit(get_vision_label(), get_achievement(), instability, instability_stage, critical_state)

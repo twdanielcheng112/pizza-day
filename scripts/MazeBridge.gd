@@ -37,6 +37,7 @@ const EXIT_SCENES := {
 @onready var game_state = $GameState
 @onready var hud = $HUD
 @onready var objects_root: Node2D = get_node_or_null("Objects")
+@onready var critical_event_controller: Node = get_node_or_null("CriticalEventController")
 
 var _maze: Dictionary
 var _trail: Array = []  ## FIFO of past player cells (Vector2i), oldest first
@@ -174,6 +175,7 @@ func _run_maze_core_stats(stats: Dictionary) -> Dictionary:
 		str(int(stats.get("puzzles", 0))),
 		str(int(stats.get("enemies", 0))),
 		str(int(stats.get("explored", 0))),
+		str(int(stats.get("previous_instability", 0))),
 	])
 	var exit_code := OS.execute(exe_path, args, output, true)
 	if exit_code != 0:
@@ -268,6 +270,8 @@ func _spawn_objects(maze: Dictionary) -> void:
 		_prepare_interactable(node)
 		var cell := Vector2i(int(obj.get("x", 0)), int(obj.get("y", 0)))
 		node.position = _cell_to_world(cell)
+		if obj_type == "exit" and exit_type == "false":
+			node.add_to_group("false_exit")
 		objects_root.add_child(node)
 
 func _init_fog(maze: Dictionary) -> void:
@@ -291,17 +295,31 @@ func _load_initial_stats(maze: Dictionary) -> void:
 		return
 	var stats: Dictionary = maze.get("stats", {})
 	var events: Dictionary = maze.get("events", {})
-	game_state.reset_from_core(stats, int(events.get("instability_stage", 0)))
+	game_state.reset_from_core(
+		stats,
+		int(events.get("instability_stage", 0)),
+		bool(events.get("critical_state", false))
+	)
 
 func _refresh_instability_stats() -> void:
 	if not game_state:
 		return
-	var result := _run_maze_core_stats(game_state.to_core_stats())
+	var core_stats: Dictionary = game_state.to_core_stats()
+	core_stats["previous_instability"] = int(game_state.get("instability"))
+	var result := _run_maze_core_stats(core_stats)
 	if result.is_empty():
 		return
 	var stats: Dictionary = result.get("stats", {})
 	var events: Dictionary = result.get("events", {})
-	game_state.apply_core_result(stats, int(events.get("instability_stage", 0)))
+	game_state.apply_core_result(
+		stats,
+		int(events.get("instability_stage", 0)),
+		bool(events.get("critical_state", false))
+	)
+	if bool(events.get("critical_event_triggered", false)):
+		_trigger_critical_sequence()
+	elif bool(events.get("critical_state", false)):
+		_apply_critical_state(true)
 	_try_expand_maze(int(events.get("instability_stage", 0)))
 
 func _try_expand_maze(instability_stage: int) -> void:
@@ -328,8 +346,18 @@ func _apply_maze_state(maze: Dictionary) -> void:
 	_spawn_objects(_maze)
 	_apply_player_cell_from_maze(_maze)
 	_apply_camera_limits()
+	if game_state:
+		_apply_critical_state(bool(game_state.get("critical_state")))
 	if bool(_maze.get("expanded_this_frame", false)):
 		_play_expansion_feedback()
+
+func _trigger_critical_sequence() -> void:
+	if critical_event_controller and critical_event_controller.has_method("trigger_critical_sequence"):
+		critical_event_controller.trigger_critical_sequence()
+
+func _apply_critical_state(active: bool) -> void:
+	if critical_event_controller and critical_event_controller.has_method("apply_critical_state"):
+		critical_event_controller.apply_critical_state(active)
 
 func _cell_to_world(cell: Vector2i) -> Vector2:
 	var size := tile_layer.tile_set.tile_size

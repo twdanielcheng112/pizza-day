@@ -6,7 +6,7 @@
  *
  * Usage:
  *   maze_core [output_path] [seed]
- *   maze_core --stats output_path vision chests puzzles enemies explored
+ *   maze_core --stats output_path vision chests puzzles enemies explored [previous_instability]
  *   maze_core --expand output_path seed player_x player_y
  *
  * Defaults: output_path = "maze_state.json" (cwd), seed = time(NULL).
@@ -92,6 +92,14 @@ static int get_instability_stage(int instability) {
     if (instability >= 61) return 2;
     if (instability >= 31) return 1;
     return 0;
+}
+
+static int is_critical_state(int instability) {
+    return instability >= 70;
+}
+
+static int did_trigger_critical_event(int previous_instability, int instability) {
+    return previous_instability < 70 && instability >= 70;
 }
 
 static void carve(int cx, int cy) {
@@ -336,6 +344,8 @@ static int write_json(
     const int explored = 0;
     const int instability = calculate_instability(vision, chests, puzzles, enemies, explored);
     const int instability_stage = get_instability_stage(instability);
+    const int critical_state = is_critical_state(instability);
+    const int critical_event_triggered = 0;
 
     FILE *f = fopen(path, "w");
     if (!f) {
@@ -393,10 +403,20 @@ static int write_json(
         "    \"instability\": %d\n"
         "  },\n"
         "  \"events\": {\n"
-        "    \"instability_stage\": %d\n"
+        "    \"instability_stage\": %d,\n"
+        "    \"critical_state\": %s,\n"
+        "    \"critical_event_triggered\": %s\n"
         "  }\n"
         "}\n",
-        vision, chests, puzzles, enemies, explored, instability, instability_stage);
+        vision,
+        chests,
+        puzzles,
+        enemies,
+        explored,
+        instability,
+        instability_stage,
+        critical_state ? "true" : "false",
+        critical_event_triggered ? "true" : "false");
     fclose(f);
     return 0;
 }
@@ -407,10 +427,13 @@ static int write_stats_json(
     int chests,
     int puzzles,
     int enemies,
-    int explored
+    int explored,
+    int previous_instability
 ) {
     int instability = calculate_instability(vision, chests, puzzles, enemies, explored);
     int instability_stage = get_instability_stage(instability);
+    int critical_state = is_critical_state(instability);
+    int critical_event_triggered = did_trigger_critical_event(previous_instability, instability);
 
     FILE *f = fopen(path, "w");
     if (!f) {
@@ -430,10 +453,20 @@ static int write_stats_json(
         "    \"instability\": %d\n"
         "  },\n"
         "  \"events\": {\n"
-        "    \"instability_stage\": %d\n"
+        "    \"instability_stage\": %d,\n"
+        "    \"critical_state\": %s,\n"
+        "    \"critical_event_triggered\": %s\n"
         "  }\n"
         "}\n",
-        vision, chests, puzzles, enemies, explored, instability, instability_stage);
+        vision,
+        chests,
+        puzzles,
+        enemies,
+        explored,
+        instability,
+        instability_stage,
+        critical_state ? "true" : "false",
+        critical_event_triggered ? "true" : "false");
     fclose(f);
     return 0;
 }
@@ -441,16 +474,24 @@ static int write_stats_json(
 int main(int argc, char **argv) {
     if (argc > 1 && strcmp(argv[1], "--stats") == 0) {
         if (argc < 8) {
-            fprintf(stderr, "usage: maze_core --stats output_path vision chests puzzles enemies explored\n");
+            fprintf(stderr, "usage: maze_core --stats output_path vision chests puzzles enemies explored [previous_instability]\n");
             return 1;
         }
+        int previous_instability = (argc > 8) ? atoi(argv[8]) : calculate_instability(
+            atoi(argv[3]),
+            atoi(argv[4]),
+            atoi(argv[5]),
+            atoi(argv[6]),
+            atoi(argv[7])
+        );
         return write_stats_json(
             argv[2],
             atoi(argv[3]),
             atoi(argv[4]),
             atoi(argv[5]),
             atoi(argv[6]),
-            atoi(argv[7])
+            atoi(argv[7]),
+            previous_instability
         );
     }
 

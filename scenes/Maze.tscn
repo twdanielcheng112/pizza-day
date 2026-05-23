@@ -6,6 +6,7 @@
 [ext_resource type="AudioStream" uid="uid://chu4okxo7q70l" path="res://assets/audio/ambient_loop.ogg" id="4_audio"]
 [ext_resource type="Script" path="res://scripts/GameState.gd" id="5_game_state"]
 [ext_resource type="Script" path="res://scripts/HUD.gd" id="6_hud"]
+[ext_resource type="Script" path="res://scripts/CriticalEventController.gd" id="7_critical"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hud_panel"]
 bg_color = Color(0.0470588, 0.0352941, 0.0588235, 0.48)
@@ -19,6 +20,9 @@ script = ExtResource("1_bridge")
 
 [node name="GameState" type="Node" parent="." unique_id=1674315515]
 script = ExtResource("5_game_state")
+
+[node name="CriticalEventController" type="Node" parent="."]
+script = ExtResource("7_critical")
 
 [node name="TileMapLayer" type="TileMapLayer" parent="." unique_id=2012640390]
 tile_set = ExtResource("2_tileset")
