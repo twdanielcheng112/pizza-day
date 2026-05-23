@@ -33,6 +33,8 @@ const EXIT_SCENES := {
 
 @onready var tile_layer: TileMapLayer = $TileMapLayer
 @onready var fog_layer: TileMapLayer = $FogLayer
+@onready var game_state = $GameState
+@onready var hud = $HUD
 @onready var objects_root: Node2D = get_node_or_null("Objects")
 
 var _maze: Dictionary
@@ -40,9 +42,12 @@ var _trail: Array = []  ## FIFO of past player cells (Vector2i), oldest first
 var _last_center := Vector2i(-9999, -9999)  ## sentinel; first update_vision call won't push
 
 func _ready() -> void:
+	if game_state and hud:
+		game_state.stats_changed.connect(hud.update_stats)
 	_maze = _run_maze_core()
 	if _maze.is_empty():
 		return
+	_load_initial_stats(_maze)
 	_render_maze(_maze)
 	_init_fog(_maze)
 	_spawn_objects(_maze)
@@ -60,6 +65,8 @@ func is_wall(cell: Vector2i) -> bool:
 func update_vision(center: Vector2i, vision_radius: int) -> void:
 	if _maze.is_empty():
 		return
+	if game_state and game_state.mark_explored(center):
+		_refresh_instability_stats()
 	if center != _last_center:
 		if _last_center != Vector2i(-9999, -9999):
 			_trail.push_back(_last_center)
@@ -83,6 +90,11 @@ func update_vision(center: Vector2i, vision_radius: int) -> void:
 				fog_layer.set_cell(c, FOG_DIM_SOURCE, ATLAS_COORDS)
 			else:
 				fog_layer.set_cell(c, FOG_DARK_SOURCE, ATLAS_COORDS)
+
+func get_vision_radius() -> int:
+	if game_state and game_state.has_method("get_vision_radius"):
+		return game_state.get_vision_radius()
+	return 1
 
 func _is_in_bounds(cell: Vector2i) -> bool:
 	if _maze.is_empty():
@@ -118,6 +130,44 @@ func _run_maze_core() -> Dictionary:
 	var parsed: Variant = JSON.parse_string(json_text)
 	if typeof(parsed) != TYPE_DICTIONARY:
 		push_error("invalid JSON from maze_core")
+		return {}
+	return parsed
+
+func _run_maze_core_stats(stats: Dictionary) -> Dictionary:
+	var project_dir := ProjectSettings.globalize_path("res://")
+	var exe_name := "maze_core.exe" if OS.has_feature("windows") else "maze_core"
+	var exe_path := project_dir.path_join(exe_name)
+	var out_path := ProjectSettings.globalize_path("user://maze_stats.json")
+
+	if not FileAccess.file_exists(exe_path):
+		push_error("maze_core executable not found at %s ??run `make` in c_src/" % exe_path)
+		return {}
+
+	var output: Array = []
+	var args := PackedStringArray([
+		"--stats",
+		out_path,
+		str(int(stats.get("vision", 1))),
+		str(int(stats.get("chests", 0))),
+		str(int(stats.get("puzzles", 0))),
+		str(int(stats.get("enemies", 0))),
+		str(int(stats.get("explored", 0))),
+	])
+	var exit_code := OS.execute(exe_path, args, output, true)
+	if exit_code != 0:
+		push_error("maze_core stats exited with code %d. stdout/stderr:\n%s" % [exit_code, "\n".join(output)])
+		return {}
+
+	var f := FileAccess.open(out_path, FileAccess.READ)
+	if f == null:
+		push_error("cannot read %s" % out_path)
+		return {}
+	var json_text := f.get_as_text()
+	f.close()
+
+	var parsed: Variant = JSON.parse_string(json_text)
+	if typeof(parsed) != TYPE_DICTIONARY:
+		push_error("invalid stats JSON from maze_core")
 		return {}
 	return parsed
 
@@ -174,6 +224,23 @@ func _spawn_player() -> void:
 	player.cell = PLAYER_SPAWN
 	add_child(player)
 	print("player: spawned at cell %s" % str(PLAYER_SPAWN))
+
+func _load_initial_stats(maze: Dictionary) -> void:
+	if not game_state:
+		return
+	var stats: Dictionary = maze.get("stats", {})
+	var events: Dictionary = maze.get("events", {})
+	game_state.reset_from_core(stats, int(events.get("instability_stage", 0)))
+
+func _refresh_instability_stats() -> void:
+	if not game_state:
+		return
+	var result := _run_maze_core_stats(game_state.to_core_stats())
+	if result.is_empty():
+		return
+	var stats: Dictionary = result.get("stats", {})
+	var events: Dictionary = result.get("events", {})
+	game_state.apply_core_result(stats, int(events.get("instability_stage", 0)))
 
 func _cell_to_world(cell: Vector2i) -> Vector2:
 	var size := tile_layer.tile_set.tile_size

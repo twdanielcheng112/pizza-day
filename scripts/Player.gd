@@ -21,7 +21,7 @@ func _ready() -> void:
 	_create_hint()
 	_update_interaction_hint()
 	if maze and maze.has_method("update_vision"):
-		maze.update_vision(cell, VISION_RADIUS)
+		maze.update_vision(cell, _current_vision_radius())
 
 func _process(_delta: float) -> void:
 	_update_interaction_hint()
@@ -53,10 +53,15 @@ func _try_move(dir: Vector2i) -> void:
 	_snap_to_cell()
 	_update_interaction_hint()
 	if maze and maze.has_method("update_vision"):
-		maze.update_vision(cell, VISION_RADIUS)
+		maze.update_vision(cell, _current_vision_radius())
 
 func _snap_to_cell() -> void:
 	position = Vector2(cell.x * CELL_SIZE + CELL_SIZE / 2.0, cell.y * CELL_SIZE + CELL_SIZE / 2.0)
+
+func _current_vision_radius() -> int:
+	if maze and maze.has_method("get_vision_radius"):
+		return maze.get_vision_radius()
+	return VISION_RADIUS
 
 func _create_hint() -> void:
 	_hint_label = Label.new()

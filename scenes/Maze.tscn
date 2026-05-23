@@ -4,9 +4,14 @@
 [ext_resource type="TileSet" uid="uid://jv61e0n7roti" path="res://assets/tiles/maze_tileset.tres" id="2_tileset"]
 [ext_resource type="TileSet" uid="uid://r7m6ostoynd7" path="res://assets/tiles/fog_tileset.tres" id="3_fog"]
 [ext_resource type="AudioStream" uid="uid://chu4okxo7q70l" path="res://assets/audio/ambient_loop.ogg" id="4_audio"]
+[ext_resource type="Script" path="res://scripts/GameState.gd" id="5_game_state"]
+[ext_resource type="Script" path="res://scripts/HUD.gd" id="6_hud"]
 
 [node name="Maze" type="Node2D" unique_id=721190233]
 script = ExtResource("1_bridge")
+
+[node name="GameState" type="Node" parent="." unique_id=1674315515]
+script = ExtResource("5_game_state")
 
 [node name="TileMapLayer" type="TileMapLayer" parent="." unique_id=2012640390]
 tile_set = ExtResource("2_tileset")
@@ -20,3 +25,31 @@ tile_set = ExtResource("3_fog")
 stream = ExtResource("4_audio")
 volume_db = -12.0
 autoplay = true
+
+[node name="HUD" type="CanvasLayer" parent="." unique_id=1873465040]
+script = ExtResource("6_hud")
+
+[node name="Panel" type="Panel" parent="HUD" unique_id=1120426485]
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 184.0
+offset_bottom = 82.0
+
+[node name="StatsBox" type="VBoxContainer" parent="HUD/Panel" unique_id=2026210365]
+offset_left = 10.0
+offset_top = 8.0
+offset_right = 166.0
+offset_bottom = 66.0
+theme_override_constants/separation = 2
+
+[node name="VisionLabel" type="Label" parent="HUD/Panel/StatsBox" unique_id=1547280723]
+text = "Vision: 3x3"
+
+[node name="AchievementLabel" type="Label" parent="HUD/Panel/StatsBox" unique_id=607620680]
+text = "Achievement: 0"
+
+[node name="InstabilityLabel" type="Label" parent="HUD/Panel/StatsBox" unique_id=1473264868]
+text = "Instability: 10"
+
+[node name="WarningSfx" type="AudioStreamPlayer" parent="HUD" unique_id=1564172054]
+volume_db = -7.0
