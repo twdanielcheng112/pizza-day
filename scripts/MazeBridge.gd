@@ -20,6 +20,7 @@ const FOG_DARK_SOURCE := 1
 const PLAYER_SCENE := preload("res://scenes/Player.tscn")
 const PLAYER_SPAWN := Vector2i(1, 1)
 const MEMORY_TRAIL_SIZE := 8  ## Number of past stepped cells that stay dim before fading to dark
+const EXPANSION_STAGE := 1
 const INTERACTABLE_SCRIPT := preload("res://scripts/Interactable.gd")
 const OBJECT_SCENES := {
 	"chest": preload("res://scenes/Chest.tscn"),
@@ -40,6 +41,8 @@ const EXIT_SCENES := {
 var _maze: Dictionary
 var _trail: Array = []  ## FIFO of past player cells (Vector2i), oldest first
 var _last_center := Vector2i(-9999, -9999)  ## sentinel; first update_vision call won't push
+var _player: Node2D = null
+var _is_expanding := false
 
 func _ready() -> void:
 	if game_state and hud:
@@ -190,6 +193,43 @@ func _run_maze_core_stats(stats: Dictionary) -> Dictionary:
 		return {}
 	return parsed
 
+func _run_maze_core_expansion(player_cell: Vector2i) -> Dictionary:
+	var project_dir := ProjectSettings.globalize_path("res://")
+	var exe_name := "maze_core.exe" if OS.has_feature("windows") else "maze_core"
+	var exe_path := project_dir.path_join(exe_name)
+	var out_path := ProjectSettings.globalize_path("user://maze_expanded.json")
+
+	if not FileAccess.file_exists(exe_path):
+		push_error("maze_core executable not found at %s ??run `make` in c_src/" % exe_path)
+		return {}
+
+	var output: Array = []
+	var seed_value := int(_maze.get("seed", int(Time.get_unix_time_from_system())))
+	var args := PackedStringArray([
+		"--expand",
+		out_path,
+		str(seed_value),
+		str(player_cell.x),
+		str(player_cell.y),
+	])
+	var exit_code := OS.execute(exe_path, args, output, true)
+	if exit_code != 0:
+		push_error("maze_core expansion exited with code %d. stdout/stderr:\n%s" % [exit_code, "\n".join(output)])
+		return {}
+
+	var f := FileAccess.open(out_path, FileAccess.READ)
+	if f == null:
+		push_error("cannot read %s" % out_path)
+		return {}
+	var json_text := f.get_as_text()
+	f.close()
+
+	var parsed: Variant = JSON.parse_string(json_text)
+	if typeof(parsed) != TYPE_DICTIONARY:
+		push_error("invalid expansion JSON from maze_core")
+		return {}
+	return parsed
+
 func _render_maze(maze: Dictionary) -> void:
 	var w := int(maze.get("width", 0))
 	var h := int(maze.get("height", 0))
@@ -240,9 +280,11 @@ func _init_fog(maze: Dictionary) -> void:
 
 func _spawn_player() -> void:
 	var player := PLAYER_SCENE.instantiate()
-	player.cell = PLAYER_SPAWN
+	player.cell = _player_cell_from_maze(_maze, PLAYER_SPAWN)
 	add_child(player)
-	print("player: spawned at cell %s" % str(PLAYER_SPAWN))
+	_player = player
+	_apply_camera_limits()
+	print("player: spawned at cell %s" % str(player.cell))
 
 func _load_initial_stats(maze: Dictionary) -> void:
 	if not game_state:
@@ -260,10 +302,82 @@ func _refresh_instability_stats() -> void:
 	var stats: Dictionary = result.get("stats", {})
 	var events: Dictionary = result.get("events", {})
 	game_state.apply_core_result(stats, int(events.get("instability_stage", 0)))
+	_try_expand_maze(int(events.get("instability_stage", 0)))
+
+func _try_expand_maze(instability_stage: int) -> void:
+	if _is_expanding or instability_stage < EXPANSION_STAGE:
+		return
+	if int(_maze.get("expansion_level", 0)) >= 1:
+		return
+
+	_is_expanding = true
+	var expanded := _run_maze_core_expansion(_get_player_cell())
+	if expanded.is_empty():
+		_is_expanding = false
+		return
+
+	_apply_maze_state(expanded)
+	_is_expanding = false
+
+func _apply_maze_state(maze: Dictionary) -> void:
+	_maze = maze
+	_trail.clear()
+	_last_center = Vector2i(-9999, -9999)
+	_render_maze(_maze)
+	_init_fog(_maze)
+	_spawn_objects(_maze)
+	_apply_player_cell_from_maze(_maze)
+	_apply_camera_limits()
+	if bool(_maze.get("expanded_this_frame", false)):
+		_play_expansion_feedback()
 
 func _cell_to_world(cell: Vector2i) -> Vector2:
 	var size := tile_layer.tile_set.tile_size
 	return Vector2(cell.x * size.x + size.x * 0.5, cell.y * size.y + size.y * 0.5)
+
+func _player_cell_from_maze(maze: Dictionary, fallback: Vector2i) -> Vector2i:
+	var player_data: Variant = maze.get("player", {})
+	if typeof(player_data) != TYPE_DICTIONARY:
+		return fallback
+	return Vector2i(int(player_data.get("x", fallback.x)), int(player_data.get("y", fallback.y)))
+
+func _get_player_cell() -> Vector2i:
+	if _player == null:
+		return _player_cell_from_maze(_maze, PLAYER_SPAWN)
+	var cell_value: Variant = _player.get("cell")
+	if typeof(cell_value) == TYPE_VECTOR2I:
+		return cell_value
+	return _player_cell_from_maze(_maze, PLAYER_SPAWN)
+
+func _apply_player_cell_from_maze(maze: Dictionary) -> void:
+	if _player == null:
+		return
+	var cell := _player_cell_from_maze(maze, _get_player_cell())
+	if _player.has_method("set_cell_from_maze"):
+		_player.set_cell_from_maze(cell)
+	else:
+		_player.set("cell", cell)
+		_player.position = _cell_to_world(cell)
+
+func _apply_camera_limits() -> void:
+	if _player == null or not _player.has_method("set_camera_bounds"):
+		return
+	_player.set_camera_bounds(Vector2i(
+		int(_maze.get("width", 0)),
+		int(_maze.get("height", 0))
+	))
+
+func _play_expansion_feedback() -> void:
+	tile_layer.modulate = Color(1.0, 0.82, 0.28, 1.0)
+	fog_layer.modulate = Color(1.0, 0.92, 0.72, 1.0)
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(tile_layer, "modulate", Color.WHITE, 0.45)
+	tween.tween_property(fog_layer, "modulate", Color.WHITE, 0.45)
+	if _player and _player.has_method("play_expansion_camera_feedback"):
+		_player.play_expansion_camera_feedback()
+	if hud and hud.has_method("show_expansion_feedback"):
+		hud.show_expansion_feedback()
 
 func _prepare_interactable(node: Node) -> void:
 	if node == null:

@@ -7,6 +7,7 @@
  * Usage:
  *   maze_core [output_path] [seed]
  *   maze_core --stats output_path vision chests puzzles enemies explored
+ *   maze_core --expand output_path seed player_x player_y
  *
  * Defaults: output_path = "maze_state.json" (cwd), seed = time(NULL).
  *
@@ -19,6 +20,9 @@
  *     "width":  <int>,
  *     "height": <int>,
  *     "seed":   <uint>,
+ *     "expansion_level": <int>,
+ *     "expanded_this_frame": <bool>,
+ *     "player": {"x": <int>, "y": <int>},
  *     "tiles":  [[<int>, ...], ...],  // 0 = floor, 1 = wall, row-major
  *     "objects": [{"type":"chest|key|vision_core|exit", "exit_type":"false|true", "x": <int>, "y": <int>}, ...],
  *     "stats":  { ... },
@@ -31,10 +35,11 @@
 #include <string.h>
 #include <time.h>
 
-#define MAZE_W 21
-#define MAZE_H 15
-#define CELL_W ((MAZE_W - 1) / 2)
-#define CELL_H ((MAZE_H - 1) / 2)
+#define BASE_MAZE_W 21
+#define BASE_MAZE_H 15
+#define EXPANSION_OFFSET 2
+#define MAX_MAZE_W (BASE_MAZE_W + EXPANSION_OFFSET * 2)
+#define MAX_MAZE_H (BASE_MAZE_H + EXPANSION_OFFSET * 2)
 
 #define TILE_FLOOR 0
 #define TILE_WALL  1
@@ -44,7 +49,11 @@
 #define CORE_COUNT 3
 #define MAX_OBJECTS 16
 
-static int grid[MAZE_H][MAZE_W];
+static int grid[MAX_MAZE_H][MAX_MAZE_W];
+static int maze_w = BASE_MAZE_W;
+static int maze_h = BASE_MAZE_H;
+static int cell_w = (BASE_MAZE_W - 1) / 2;
+static int cell_h = (BASE_MAZE_H - 1) / 2;
 
 typedef struct {
     const char *type;
@@ -55,7 +64,7 @@ typedef struct {
 
 static MazeObject objects[MAX_OBJECTS];
 static int object_count = 0;
-static int occupied[MAZE_H][MAZE_W];
+static int occupied[MAX_MAZE_H][MAX_MAZE_W];
 
 static const int DX[4] = { 0,  0,  1, -1};
 static const int DY[4] = { 1, -1,  0,  0};
@@ -102,7 +111,7 @@ static void carve(int cx, int cy) {
         int d = order[i];
         int ncx = cx + DX[d];
         int ncy = cy + DY[d];
-        if (ncx < 0 || ncx >= CELL_W || ncy < 0 || ncy >= CELL_H) continue;
+        if (ncx < 0 || ncx >= cell_w || ncy < 0 || ncy >= cell_h) continue;
 
         int nx = ncx * 2 + 1;
         int ny = ncy * 2 + 1;
@@ -114,7 +123,7 @@ static void carve(int cx, int cy) {
 }
 
 static int can_place_at(int x, int y) {
-    if (x < 0 || y < 0 || x >= MAZE_W || y >= MAZE_H) return 0;
+    if (x < 0 || y < 0 || x >= maze_w || y >= maze_h) return 0;
     if (grid[y][x] != TILE_FLOOR) return 0;
     if (occupied[y][x]) return 0;
     if (x == 1 && y == 1) return 0;
@@ -131,23 +140,23 @@ static int add_object_at(const char *type, const char *exit_type, int x, int y) 
 
 static int try_place_object(const char *type, const char *exit_type, int attempts) {
     for (int i = 0; i < attempts; ++i) {
-        int x = rand() % MAZE_W;
-        int y = rand() % MAZE_H;
+        int x = rand() % maze_w;
+        int y = rand() % maze_h;
         if (add_object_at(type, exit_type, x, y)) return 1;
     }
     return 0;
 }
 
 static int find_center_floor(int *out_x, int *out_y) {
-    int cx = MAZE_W / 2;
-    int cy = MAZE_H / 2;
+    int cx = maze_w / 2;
+    int cy = maze_h / 2;
     if (can_place_at(cx, cy)) {
         *out_x = cx;
         *out_y = cy;
         return 1;
     }
 
-    int max_r = (MAZE_W > MAZE_H) ? MAZE_W : MAZE_H;
+    int max_r = (maze_w > maze_h) ? maze_w : maze_h;
     for (int r = 1; r < max_r; ++r) {
         for (int dy = -r; dy <= r; ++dy) {
             for (int dx = -r; dx <= r; ++dx) {
@@ -166,15 +175,15 @@ static int find_center_floor(int *out_x, int *out_y) {
 }
 
 static int find_border_floor(int *out_x, int *out_y) {
-    int cx = MAZE_W / 2;
-    int cy = MAZE_H / 2;
+    int cx = maze_w / 2;
+    int cy = maze_h / 2;
     int best_dist = -1;
     int best_x = 0;
     int best_y = 0;
 
-    for (int x = 0; x < MAZE_W; ++x) {
+    for (int x = 0; x < maze_w; ++x) {
         int y_top = 0;
-        int y_bot = MAZE_H - 1;
+        int y_bot = maze_h - 1;
         if (can_place_at(x, y_top)) {
             int dist = abs(x - cx) + abs(y_top - cy);
             if (dist > best_dist) { best_dist = dist; best_x = x; best_y = y_top; }
@@ -185,9 +194,9 @@ static int find_border_floor(int *out_x, int *out_y) {
         }
     }
 
-    for (int y = 0; y < MAZE_H; ++y) {
+    for (int y = 0; y < maze_h; ++y) {
         int x_left = 0;
-        int x_right = MAZE_W - 1;
+        int x_right = maze_w - 1;
         if (can_place_at(x_left, y)) {
             int dist = abs(x_left - cx) + abs(y - cy);
             if (dist > best_dist) { best_dist = dist; best_x = x_left; best_y = y; }
@@ -238,7 +247,88 @@ static void place_objects(void) {
     }
 }
 
-static int write_json(const char *path, unsigned int seed) {
+static void init_base_maze(void) {
+    maze_w = BASE_MAZE_W;
+    maze_h = BASE_MAZE_H;
+    cell_w = (BASE_MAZE_W - 1) / 2;
+    cell_h = (BASE_MAZE_H - 1) / 2;
+
+    for (int y = 0; y < MAX_MAZE_H; ++y) {
+        for (int x = 0; x < MAX_MAZE_W; ++x) {
+            grid[y][x] = TILE_WALL;
+        }
+    }
+
+    carve(0, 0);
+    place_objects();
+}
+
+static void expand_maze(int *player_x, int *player_y) {
+    int old_w = maze_w;
+    int old_h = maze_h;
+    int new_w = old_w + EXPANSION_OFFSET * 2;
+    int new_h = old_h + EXPANSION_OFFSET * 2;
+    int expanded_grid[MAX_MAZE_H][MAX_MAZE_W];
+
+    for (int y = 0; y < MAX_MAZE_H; ++y) {
+        for (int x = 0; x < MAX_MAZE_W; ++x) {
+            expanded_grid[y][x] = TILE_WALL;
+        }
+    }
+
+    for (int y = 0; y < old_h; ++y) {
+        for (int x = 0; x < old_w; ++x) {
+            expanded_grid[y + EXPANSION_OFFSET][x + EXPANSION_OFFSET] = grid[y][x];
+        }
+    }
+
+    int top_y = 1;
+    int bottom_y = new_h - 2;
+    int left_x = 1;
+    int right_x = new_w - 2;
+    for (int x = left_x; x <= right_x; ++x) {
+        expanded_grid[top_y][x] = TILE_FLOOR;
+        expanded_grid[bottom_y][x] = TILE_FLOOR;
+    }
+    for (int y = top_y; y <= bottom_y; ++y) {
+        expanded_grid[y][left_x] = TILE_FLOOR;
+        expanded_grid[y][right_x] = TILE_FLOOR;
+    }
+
+    for (int y = top_y; y <= EXPANSION_OFFSET + 1; ++y) {
+        expanded_grid[y][EXPANSION_OFFSET + 1] = TILE_FLOOR;
+    }
+    for (int x = EXPANSION_OFFSET + old_w - 2; x <= right_x; ++x) {
+        expanded_grid[EXPANSION_OFFSET + old_h - 2][x] = TILE_FLOOR;
+    }
+
+    for (int y = 0; y < new_h; ++y) {
+        for (int x = 0; x < new_w; ++x) {
+            grid[y][x] = expanded_grid[y][x];
+        }
+    }
+
+    for (int i = 0; i < object_count; ++i) {
+        objects[i].x += EXPANSION_OFFSET;
+        objects[i].y += EXPANSION_OFFSET;
+    }
+    *player_x += EXPANSION_OFFSET;
+    *player_y += EXPANSION_OFFSET;
+
+    maze_w = new_w;
+    maze_h = new_h;
+    cell_w = (maze_w - 1) / 2;
+    cell_h = (maze_h - 1) / 2;
+}
+
+static int write_json(
+    const char *path,
+    unsigned int seed,
+    int expansion_level,
+    int expanded_this_frame,
+    int player_x,
+    int player_y
+) {
     const int vision = 1;
     const int chests = 0;
     const int puzzles = 0;
@@ -259,17 +349,26 @@ static int write_json(const char *path, unsigned int seed) {
         "  \"width\": %d,\n"
         "  \"height\": %d,\n"
         "  \"seed\": %u,\n"
+        "  \"expansion_level\": %d,\n"
+        "  \"expanded_this_frame\": %s,\n"
+        "  \"player\": {\"x\": %d, \"y\": %d},\n"
         "  \"tiles\": [\n",
-        MAZE_W, MAZE_H, seed);
+        maze_w,
+        maze_h,
+        seed,
+        expansion_level,
+        expanded_this_frame ? "true" : "false",
+        player_x,
+        player_y);
 
-    for (int y = 0; y < MAZE_H; ++y) {
+    for (int y = 0; y < maze_h; ++y) {
         fprintf(f, "    [");
-        for (int x = 0; x < MAZE_W; ++x) {
+        for (int x = 0; x < maze_w; ++x) {
             fprintf(f, "%d", grid[y][x]);
-            if (x != MAZE_W - 1) fputc(',', f);
+            if (x != maze_w - 1) fputc(',', f);
         }
         fputc(']', f);
-        if (y != MAZE_H - 1) fputc(',', f);
+        if (y != maze_h - 1) fputc(',', f);
         fputc('\n', f);
     }
 
@@ -355,6 +454,23 @@ int main(int argc, char **argv) {
         );
     }
 
+    if (argc > 1 && strcmp(argv[1], "--expand") == 0) {
+        if (argc < 6) {
+            fprintf(stderr, "usage: maze_core --expand output_path seed player_x player_y\n");
+            return 1;
+        }
+
+        const char *out_path = argv[2];
+        unsigned int seed = (unsigned int)strtoul(argv[3], NULL, 10);
+        int player_x = atoi(argv[4]);
+        int player_y = atoi(argv[5]);
+
+        srand(seed);
+        init_base_maze();
+        expand_maze(&player_x, &player_y);
+        return write_json(out_path, seed, 1, 1, player_x, player_y);
+    }
+
     const char *out_path = (argc > 1) ? argv[1] : "maze_state.json";
 
     unsigned int seed;
@@ -365,14 +481,7 @@ int main(int argc, char **argv) {
     }
     srand(seed);
 
-    for (int y = 0; y < MAZE_H; ++y) {
-        for (int x = 0; x < MAZE_W; ++x) {
-            grid[y][x] = TILE_WALL;
-        }
-    }
+    init_base_maze();
 
-    carve(0, 0);
-    place_objects();
-
-    return write_json(out_path, seed);
+    return write_json(out_path, seed, 0, 0, 1, 1);
 }

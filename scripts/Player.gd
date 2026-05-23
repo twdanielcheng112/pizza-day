@@ -8,10 +8,12 @@ extends Node2D
 const CELL_SIZE := 24
 const DEFAULT_VISION_RADIUS := 1  ## 3x3
 const INTERACT_RANGE := 0
+const EXPANSION_ZOOM_OUT_FACTOR := 0.86
 
 @export var cell: Vector2i = Vector2i(1, 1)
 
 @onready var maze: Node2D = get_parent()
+@onready var camera: Camera2D = $Camera2D
 
 var _nearest_interactable: Node = null
 var _hint_label: Label = null
@@ -52,6 +54,38 @@ func _try_move(dir: Vector2i) -> void:
 	_snap_to_cell()
 	_update_interaction_hint()
 	_refresh_vision()
+
+func set_cell_from_maze(new_cell: Vector2i) -> void:
+	cell = new_cell
+	_snap_to_cell()
+	_update_interaction_hint()
+	_refresh_vision()
+
+func set_camera_bounds(map_size: Vector2i) -> void:
+	if camera == null:
+		return
+	camera.limit_left = 0
+	camera.limit_top = 0
+	camera.limit_right = map_size.x * CELL_SIZE
+	camera.limit_bottom = map_size.y * CELL_SIZE
+
+func play_expansion_camera_feedback() -> void:
+	if camera == null:
+		return
+	var base_zoom := camera.zoom
+	var zoomed_out := base_zoom * EXPANSION_ZOOM_OUT_FACTOR
+	camera.offset = Vector2.ZERO
+	var tween := create_tween()
+	tween.tween_property(camera, "zoom", zoomed_out, 0.14).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	for offset in [
+		Vector2(7, -4),
+		Vector2(-6, 5),
+		Vector2(4, 4),
+		Vector2(-3, -5),
+		Vector2.ZERO,
+	]:
+		tween.tween_property(camera, "offset", offset, 0.035)
+	tween.tween_property(camera, "zoom", base_zoom, 0.24).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 func _snap_to_cell() -> void:
 	position = Vector2(cell.x * CELL_SIZE + CELL_SIZE / 2.0, cell.y * CELL_SIZE + CELL_SIZE / 2.0)
