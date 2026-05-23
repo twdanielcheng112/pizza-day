@@ -25,6 +25,10 @@ const OBJECT_SCENES := {
 	"key": preload("res://scenes/Key.tscn"),
 	"vision_core": preload("res://scenes/VisionCore.tscn")
 }
+const EXIT_SCENES := {
+	"false": preload("res://scenes/ExitFalse.tscn"),
+	"true": preload("res://scenes/ExitTrue.tscn")
+}
 
 @onready var tile_layer: TileMapLayer = $TileMapLayer
 @onready var fog_layer: TileMapLayer = $FogLayer
@@ -141,10 +145,18 @@ func _spawn_objects(maze: Dictionary) -> void:
 		if typeof(obj) != TYPE_DICTIONARY:
 			continue
 		var obj_type := String(obj.get("type", ""))
-		var scene: PackedScene = OBJECT_SCENES.get(obj_type, null)
+		var scene: PackedScene = null
+		var exit_type := ""
+		if obj_type == "exit":
+			exit_type = String(obj.get("exit_type", ""))
+			scene = EXIT_SCENES.get(exit_type, null)
+		else:
+			scene = OBJECT_SCENES.get(obj_type, null)
 		if scene == null:
 			continue
 		var node := scene.instantiate()
+		if obj_type == "exit":
+			node.set_meta("exit_type", exit_type)
 		var cell := Vector2i(int(obj.get("x", 0)), int(obj.get("y", 0)))
 		node.position = _cell_to_world(cell)
 		objects_root.add_child(node)
