@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://brhubgpcd560" path="res://scripts/MazeBridge.gd" id="1_bridge"]
 [ext_resource type="TileSet" uid="uid://jv61e0n7roti" path="res://assets/tiles/maze_tileset.tres" id="2_tileset"]
 [ext_resource type="TileSet" uid="uid://r7m6ostoynd7" path="res://assets/tiles/fog_tileset.tres" id="3_fog"]
+[ext_resource type="AudioStream" uid="uid://chu4okxo7q70l" path="res://assets/audio/ambient_loop.ogg" id="4_audio"]
 
 [node name="Maze" type="Node2D" unique_id=721190233]
 script = ExtResource("1_bridge")
@@ -12,3 +13,7 @@ tile_set = ExtResource("2_tileset")
 
 [node name="FogLayer" type="TileMapLayer" parent="." unique_id=1859054612]
 tile_set = ExtResource("3_fog")
+
+[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="." unique_id=1490282310]
+stream = ExtResource("4_audio")
+autoplay = true
