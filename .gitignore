@@ -9,3 +9,6 @@
 # M1 — runtime output (Godot user:// dir is platform-specific; this match is
 # defensive in case maze_core is ever run with a project-relative argv[1])
 /maze_state.json
+
+# Claude Code — per-developer local settings (do not commit)
+.claude/settings.local.json
