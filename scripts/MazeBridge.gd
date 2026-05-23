@@ -21,6 +21,7 @@ const PLAYER_SCENE := preload("res://scenes/Player.tscn")
 const PLAYER_SPAWN := Vector2i(1, 1)
 const MEMORY_TRAIL_SIZE := 8  ## Number of past stepped cells that stay dim before fading to dark
 const EXPANSION_STAGE := 1
+const EXPANSION_OFFSET := 2
 const INTERACTABLE_SCRIPT := preload("res://scripts/Interactable.gd")
 const EXIT_SCRIPT := preload("res://scripts/Exit.gd")
 const OBJECT_SCENES := {
@@ -61,6 +62,11 @@ const ENDING_MUSIC := {
 	EndingType.NORMAL: preload("res://assets/audio/endings/ending_normal.ogg"),
 	EndingType.TRUE: preload("res://assets/audio/endings/ending_true.ogg")
 }
+const ENDING_SCENES := {
+	EndingType.BAD: preload("res://scenes/ui/EndingBad.tscn"),
+	EndingType.NORMAL: preload("res://scenes/ui/EndingNormal.tscn"),
+	EndingType.TRUE: preload("res://scenes/ui/EndingTrue.tscn")
+}
 
 @onready var tile_layer: TileMapLayer = $TileMapLayer
 @onready var fog_layer: TileMapLayer = $FogLayer
@@ -78,6 +84,7 @@ var _last_center := Vector2i(-9999, -9999)  ## sentinel; first update_vision cal
 var _player: Node2D = null
 var _is_expanding := false
 var _is_game_over := false
+var _consumed_object_keys: Dictionary = {}
 
 func _ready() -> void:
 	if game_state and hud:
@@ -169,16 +176,23 @@ func get_vision_core_count() -> int:
 		return game_state.get_vision_core_count()
 	return 0
 
-func on_chest_opened() -> void:
+func on_chest_opened(source: Node = null) -> void:
 	if _is_game_over or not game_state:
 		return
+	_mark_object_consumed(source)
 	if game_state.has_method("apply_chest_open"):
 		game_state.apply_chest_open()
 	_refresh_instability_stats()
 
-func on_vision_core_picked() -> void:
+func on_key_picked(source: Node = null) -> void:
+	if _is_game_over:
+		return
+	_mark_object_consumed(source)
+
+func on_vision_core_picked(source: Node = null) -> void:
 	if _is_game_over or not game_state:
 		return
+	_mark_object_consumed(source)
 	if game_state.has_method("apply_vision_core_pickup"):
 		game_state.apply_vision_core_pickup()
 	_refresh_instability_stats()
@@ -210,9 +224,19 @@ func show_ending(ending: EndingType) -> void:
 		_player.set_process_unhandled_input(false)
 		_player.set_physics_process(false)
 
-	var data: Dictionary = ENDING_TEXT.get(ending, ENDING_TEXT[EndingType.NORMAL])
-	if ending_screen and ending_screen.has_method("show_ending"):
-		ending_screen.show_ending(String(data["title"]), String(data["body"]), RESTART_HINT)
+	var scene: PackedScene = ENDING_SCENES.get(ending, null)
+	if scene != null:
+		var screen := scene.instantiate() as CanvasLayer
+		if screen == null:
+			return
+		add_child(screen)
+		ending_screen = screen
+		if screen.has_method("show_default_ending"):
+			screen.show_default_ending()
+	else:
+		var data: Dictionary = ENDING_TEXT.get(ending, ENDING_TEXT[EndingType.NORMAL])
+		if ending_screen and ending_screen.has_method("show_ending"):
+			ending_screen.show_ending(String(data["title"]), String(data["body"]), RESTART_HINT)
 	_play_ending_music(ending)
 
 func _is_in_bounds(cell: Vector2i) -> bool:
@@ -349,10 +373,12 @@ func _spawn_objects(maze: Dictionary) -> void:
 		child.queue_free()
 
 	var objects: Array = maze.get("objects", [])
+	var expansion_level := int(maze.get("expansion_level", 0))
 	for obj in objects:
 		if typeof(obj) != TYPE_DICTIONARY:
 			continue
 		var obj_type := String(obj.get("type", ""))
+		var cell := Vector2i(int(obj.get("x", 0)), int(obj.get("y", 0)))
 		var scene: PackedScene = null
 		var exit_type := ""
 		if obj_type == "exit":
@@ -362,12 +388,16 @@ func _spawn_objects(maze: Dictionary) -> void:
 			scene = OBJECT_SCENES.get(obj_type, null)
 		if scene == null:
 			continue
+		var object_key := _object_key(obj_type, exit_type, cell, expansion_level)
+		if obj_type != "exit" and _consumed_object_keys.has(object_key):
+			continue
 		var node := scene.instantiate()
 		if obj_type == "exit":
 			node.set_script(EXIT_SCRIPT)
 			node.set("exit_type", exit_type)
 		_prepare_interactable(node)
-		var cell := Vector2i(int(obj.get("x", 0)), int(obj.get("y", 0)))
+		node.set_meta("object_key", object_key)
+		node.set_meta("object_type", obj_type)
 		node.position = _cell_to_world(cell)
 		if obj_type == "exit" and exit_type == EXIT_TYPE_FALSE:
 			node.add_to_group("false_exit")
@@ -532,3 +562,15 @@ func _prepare_interactable(node: Node) -> void:
 		node.add_to_group("interactable")
 	if not node.has_method("interact") and node.get_script() == null:
 		node.set_script(INTERACTABLE_SCRIPT)
+
+func _mark_object_consumed(source: Node) -> void:
+	if source == null:
+		return
+	var object_key := String(source.get_meta("object_key", ""))
+	if object_key.is_empty():
+		return
+	_consumed_object_keys[object_key] = true
+
+func _object_key(obj_type: String, exit_type: String, cell: Vector2i, expansion_level: int) -> String:
+	var origin_cell := cell - Vector2i(EXPANSION_OFFSET * expansion_level, EXPANSION_OFFSET * expansion_level)
+	return "%s:%s:%d:%d" % [obj_type, exit_type, origin_cell.x, origin_cell.y]

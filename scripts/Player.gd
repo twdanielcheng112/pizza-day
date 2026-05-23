@@ -140,14 +140,18 @@ func _try_interact() -> void:
 		_nearest_interactable.interact(self)
 		_update_interaction_hint()
 
-func on_chest_opened() -> void:
+func on_chest_opened(source: Node = null) -> void:
 	if maze and maze.has_method("on_chest_opened"):
-		maze.on_chest_opened()
+		maze.on_chest_opened(source)
 	_refresh_vision()
 
-func on_vision_core_picked() -> void:
+func on_key_picked(source: Node = null) -> void:
+	if maze and maze.has_method("on_key_picked"):
+		maze.on_key_picked(source)
+
+func on_vision_core_picked(source: Node = null) -> void:
 	if maze and maze.has_method("on_vision_core_picked"):
-		maze.on_vision_core_picked()
+		maze.on_vision_core_picked(source)
 	_refresh_vision()
 	var core_count := 0
 	if maze and maze.has_method("get_vision_core_count"):

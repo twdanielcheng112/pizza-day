@@ -28,7 +28,7 @@ func interact(player: Node = null) -> void:
 		remove_from_group("interactable")
 
 	if player and player.has_method("on_chest_opened"):
-		player.on_chest_opened()
+		player.on_chest_opened(self)
 
 	_play_open_sfx()
 

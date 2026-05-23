@@ -27,7 +27,7 @@ func interact(player: Node = null) -> void:
 		_collision.disabled = true
 
 	if player and player.has_method("on_key_picked"):
-		player.on_key_picked()
+		player.on_key_picked(self)
 
 	_play_pickup_sfx()
 	await get_tree().create_timer(KEY_SFX_DURATION).timeout

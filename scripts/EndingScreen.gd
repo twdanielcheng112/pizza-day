@@ -11,6 +11,10 @@ const BODY_COLOR := Color(0.84, 0.78, 0.82)
 const HINT_COLOR := Color(0.62, 0.56, 0.62)
 const FADE_SECONDS := 0.8
 
+@export var default_title := ""
+@export_multiline var default_body := ""
+@export var default_hint := "按 R 再走一次"
+
 @onready var _root: Control = get_node_or_null("Root")
 @onready var _title_label: Label = get_node_or_null("Root/Center/TextBox/EndingTitle")
 @onready var _body_label: Label = get_node_or_null("Root/Center/TextBox/EndingBody")
@@ -34,6 +38,9 @@ func show_ending(title: String, body: String, hint: String) -> void:
 
 	var tween := create_tween()
 	tween.tween_property(_root, "modulate:a", 1.0, FADE_SECONDS)
+
+func show_default_ending() -> void:
+	show_ending(default_title, default_body, default_hint)
 
 func _build_screen() -> void:
 	_root = Control.new()

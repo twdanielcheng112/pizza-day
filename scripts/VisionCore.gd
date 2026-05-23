@@ -27,7 +27,7 @@ func interact(player: Node = null) -> void:
 		_collision.disabled = true
 
 	if player and player.has_method("on_vision_core_picked"):
-		player.on_vision_core_picked()
+		player.on_vision_core_picked(self)
 
 	_play_pickup_sfx()
 	await get_tree().create_timer(CORE_SFX_DURATION).timeout

@@ -1,0 +1,9 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/EndingScreen.gd" id="1_ending_screen"]
+
+[node name="EndingTrue" type="CanvasLayer"]
+script = ExtResource("1_ending_screen")
+default_title = "你沒有再拿"
+default_body = "迷宮等了一會兒。你沒有回答。於是它把真正的門還給你。"
+default_hint = "按 R 再走一次"

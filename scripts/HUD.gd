@@ -5,7 +5,7 @@ extends CanvasLayer
 ## Also owns the one-shot warning stings when instability crosses a higher
 ## stage threshold.
 
-const CRITICAL_MESSAGE := "The boundary remembers your greed."
+const CRITICAL_MESSAGE := "邊界已記住你的貪婪"
 const WARNING_STINGS := {
 	1: preload("res://assets/audio/stings/sting_stage1.ogg"),
 	2: preload("res://assets/audio/stings/sting_stage2.ogg"),
