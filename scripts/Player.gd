@@ -185,8 +185,11 @@ func _show_confirmation_prompt(node: Node) -> void:
 	var instability := 0
 	if maze and maze.has_method("get_instability_value"):
 		instability = int(maze.get_instability_value())
+	var object_type := String(node.get_meta("object_type", ""))
 	var message := "要取走視野核心嗎？\n邊界會記住你拿過。"
-	if String(node.get_meta("object_type", "")) == "greed_button":
+	var action_verb := "拿走"
+	if object_type == "greed_button":
+		action_verb = "按下"
 		message = "要按下這顆紅鍵嗎？\n一面牆會被推開，失控值會升起。"
 		if instability >= 70:
 			message = "還是要按下嗎？\n邊界已經在回望你。"
@@ -197,7 +200,7 @@ func _show_confirmation_prompt(node: Node) -> void:
 			message = "要取走視野核心嗎？\n牆已經變薄。"
 		elif instability >= 31:
 			message = "要取走視野核心嗎？\n邊界開始移動。"
-	_confirmation_label.text = "%s\n\nE / Enter：拿走    Esc / Q：離開" % message
+	_confirmation_label.text = "%s\n\nE / Enter：%s    Esc / Q：離開" % [message, action_verb]
 	_confirmation_layer.visible = true
 
 func _confirm_pending_interaction() -> void:
