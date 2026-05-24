@@ -371,10 +371,16 @@ func _is_in_bounds(cell: Vector2i) -> bool:
 	var h := int(_maze.get("height", 0))
 	return cell.x >= 0 and cell.y >= 0 and cell.x < w and cell.y < h
 
-func _run_maze_core() -> Dictionary:
-	var project_dir := ProjectSettings.globalize_path("res://")
+func _maze_core_path() -> String:
+	## In editor: next to project.godot (res://). In exported builds: next to the
+	## game executable, because res:// lives inside the .pck and cannot be exec'd.
 	var exe_name := "maze_core.exe" if OS.has_feature("windows") else "maze_core"
-	var exe_path := project_dir.path_join(exe_name)
+	var base_dir := ProjectSettings.globalize_path("res://") if OS.has_feature("editor") \
+		else OS.get_executable_path().get_base_dir()
+	return base_dir.path_join(exe_name)
+
+func _run_maze_core() -> Dictionary:
+	var exe_path := _maze_core_path()
 	var out_path := ProjectSettings.globalize_path("user://maze_state.json")
 
 	if not FileAccess.file_exists(exe_path):
@@ -402,9 +408,7 @@ func _run_maze_core() -> Dictionary:
 	return parsed
 
 func _run_maze_core_stats(stats: Dictionary) -> Dictionary:
-	var project_dir := ProjectSettings.globalize_path("res://")
-	var exe_name := "maze_core.exe" if OS.has_feature("windows") else "maze_core"
-	var exe_path := project_dir.path_join(exe_name)
+	var exe_path := _maze_core_path()
 	var out_path := ProjectSettings.globalize_path("user://maze_stats.json")
 
 	if not FileAccess.file_exists(exe_path):
@@ -442,9 +446,7 @@ func _run_maze_core_stats(stats: Dictionary) -> Dictionary:
 	return parsed
 
 func _run_maze_core_expansion(player_cell: Vector2i) -> Dictionary:
-	var project_dir := ProjectSettings.globalize_path("res://")
-	var exe_name := "maze_core.exe" if OS.has_feature("windows") else "maze_core"
-	var exe_path := project_dir.path_join(exe_name)
+	var exe_path := _maze_core_path()
 	var out_path := ProjectSettings.globalize_path("user://maze_expanded.json")
 
 	if not FileAccess.file_exists(exe_path):
