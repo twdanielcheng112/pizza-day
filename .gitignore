@@ -3,8 +3,8 @@
 /android/
 
 # M1 — platform-specific compiled binary, built locally via `make` in c_src/
-#/maze_core
-#/maze_core.exe
+/maze_core
+/maze_core.exe
 
 # M1 — runtime output (Godot user:// dir is platform-specific; this match is
 # defensive in case maze_core is ever run with a project-relative argv[1])
