@@ -7,6 +7,7 @@ extends Node
 
 const FALSE_EXIT_GROUP := "false_exit"
 const FALSE_EXIT_CRITICAL_COLOR := Color(1.0, 0.18, 0.14, 1.0)
+const FALSE_EXIT_CRITICAL_SCALE := Vector2(1.12, 1.12)
 
 @export var hud_path: NodePath = NodePath("../HUD")
 
@@ -44,8 +45,12 @@ func _set_false_exit_highlight(active: bool) -> void:
 			continue
 		var tween := create_tween()
 		tween.set_loops()
+		tween.set_parallel(true)
 		tween.tween_property(visual, "modulate", FALSE_EXIT_CRITICAL_COLOR, 0.28)
+		tween.tween_property(visual, "scale", FALSE_EXIT_CRITICAL_SCALE, 0.28)
+		tween.chain()
 		tween.tween_property(visual, "modulate", Color.WHITE, 0.28)
+		tween.parallel().tween_property(visual, "scale", Vector2.ONE, 0.28)
 		_false_exit_tweens[visual] = tween
 
 func _clear_false_exit_highlight() -> void:
@@ -56,6 +61,7 @@ func _clear_false_exit_highlight() -> void:
 		if tween:
 			tween.kill()
 		visual.modulate = Color.WHITE
+		visual.scale = Vector2.ONE
 	_false_exit_tweens.clear()
 
 func _get_exit_visual(exit_node: Node) -> CanvasItem:

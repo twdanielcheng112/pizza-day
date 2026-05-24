@@ -24,10 +24,12 @@ const EXPANSION_STAGE := 1
 const EXPANSION_OFFSET := 2
 const INTERACTABLE_SCRIPT := preload("res://scripts/Interactable.gd")
 const EXIT_SCRIPT := preload("res://scripts/Exit.gd")
+const WALL_HINT_SCRIPT := preload("res://scripts/WallHint.gd")
 const OBJECT_SCENES := {
 	"chest": preload("res://scenes/Chest.tscn"),
 	"key": preload("res://scenes/Key.tscn"),
-	"vision_core": preload("res://scenes/VisionCore.tscn")
+	"vision_core": preload("res://scenes/VisionCore.tscn"),
+	"enemy": preload("res://scenes/Enemy.tscn")
 }
 const EXIT_SCENES := {
 	"false": preload("res://scenes/ExitFalse.tscn"),
@@ -86,10 +88,14 @@ var _is_expanding := false
 var _is_game_over := false
 var _consumed_object_keys: Dictionary = {}
 var _has_key := false
+var _distortion_tween: Tween = null
+var _ending_transition_layer: CanvasLayer = null
+var _ending_fade: ColorRect = null
 
 func _ready() -> void:
 	if game_state and hud:
 		game_state.stats_changed.connect(hud.update_stats)
+		game_state.stats_changed.connect(_on_stats_changed)
 	_maze = _run_maze_core()
 	if _maze.is_empty():
 		return
@@ -101,6 +107,10 @@ func _ready() -> void:
 
 func _input(event: InputEvent) -> void:
 	if not event is InputEventKey or not event.pressed or event.echo:
+		return
+	if event.keycode == KEY_F1 and hud and hud.has_method("toggle_debug_overlay"):
+		hud.toggle_debug_overlay()
+		get_viewport().set_input_as_handled()
 		return
 
 	if OS.is_debug_build() and not _is_game_over:
@@ -177,6 +187,9 @@ func get_vision_core_count() -> int:
 		return game_state.get_vision_core_count()
 	return 0
 
+func get_instability_value() -> int:
+	return _current_instability()
+
 func has_key() -> bool:
 	return _has_key
 
@@ -200,6 +213,14 @@ func on_vision_core_picked(source: Node = null) -> void:
 	_mark_object_consumed(source)
 	if game_state.has_method("apply_vision_core_pickup"):
 		game_state.apply_vision_core_pickup()
+	_refresh_instability_stats()
+
+func on_enemy_seen(source: Node = null) -> void:
+	if _is_game_over or not game_state:
+		return
+	_mark_object_consumed(source)
+	if game_state.has_method("apply_enemy_seen"):
+		game_state.apply_enemy_seen()
 	_refresh_instability_stats()
 
 func on_exit_interacted(exit_type: String) -> void:
@@ -229,6 +250,11 @@ func show_ending(ending: EndingType) -> void:
 		_player.set_process_unhandled_input(false)
 		_player.set_physics_process(false)
 
+	_show_ending_after_transition(ending)
+
+func _show_ending_after_transition(ending: EndingType) -> void:
+	await _fade_to_black()
+
 	var scene: PackedScene = ENDING_SCENES.get(ending, null)
 	if scene != null:
 		var screen := scene.instantiate() as CanvasLayer
@@ -243,6 +269,23 @@ func show_ending(ending: EndingType) -> void:
 		if ending_screen and ending_screen.has_method("show_ending"):
 			ending_screen.show_ending(String(data["title"]), String(data["body"]), RESTART_HINT)
 	_play_ending_music(ending)
+
+func _fade_to_black() -> void:
+	if _ending_transition_layer == null:
+		_ending_transition_layer = CanvasLayer.new()
+		_ending_transition_layer.layer = 45
+		add_child(_ending_transition_layer)
+		_ending_fade = ColorRect.new()
+		_ending_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_ending_fade.set_anchors_preset(Control.PRESET_FULL_RECT)
+		_ending_transition_layer.add_child(_ending_fade)
+	if _ending_fade == null:
+		return
+	_ending_fade.visible = true
+	_ending_fade.color = Color(0.047, 0.035, 0.059, 0.0)
+	var tween := create_tween()
+	tween.tween_property(_ending_fade, "color:a", 1.0, 0.75)
+	await tween.finished
 
 func _is_in_bounds(cell: Vector2i) -> bool:
 	if _maze.is_empty():
@@ -377,13 +420,16 @@ func _spawn_objects(maze: Dictionary) -> void:
 	for child in objects_root.get_children():
 		child.queue_free()
 
-	var objects: Array = maze.get("objects", [])
+	var objects: Array = _objects_with_r2_fallback(maze)
 	var expansion_level := int(maze.get("expansion_level", 0))
 	for obj in objects:
 		if typeof(obj) != TYPE_DICTIONARY:
 			continue
 		var obj_type := String(obj.get("type", ""))
 		var cell := Vector2i(int(obj.get("x", 0)), int(obj.get("y", 0)))
+		if obj_type == "wall_text":
+			_spawn_wall_text(obj, _find_wall_hint_cell(maze, cell))
+			continue
 		var scene: PackedScene = null
 		var exit_type := ""
 		if obj_type == "exit":
@@ -394,19 +440,195 @@ func _spawn_objects(maze: Dictionary) -> void:
 		if scene == null:
 			continue
 		var object_key := _object_key(obj_type, exit_type, cell, expansion_level)
-		if obj_type != "exit" and _consumed_object_keys.has(object_key):
+		if obj_type != "exit" and obj_type != "enemy" and _consumed_object_keys.has(object_key):
 			continue
 		var node := scene.instantiate()
 		if obj_type == "exit":
 			node.set_script(EXIT_SCRIPT)
 			node.set("exit_type", exit_type)
-		_prepare_interactable(node)
+		elif obj_type == "enemy" and node.has_method("set_patrol_cells"):
+			node.set_patrol_cells(_parse_patrol_cells(obj, cell))
+		if obj_type != "enemy":
+			_prepare_interactable(node)
 		node.set_meta("object_key", object_key)
 		node.set_meta("object_type", obj_type)
 		node.position = _cell_to_world(cell)
 		if obj_type == "exit" and exit_type == EXIT_TYPE_FALSE:
 			node.add_to_group("false_exit")
 		objects_root.add_child(node)
+
+func _spawn_wall_text(obj: Dictionary, cell: Vector2i) -> void:
+	var wall_dir := _wall_neighbor_direction(_maze, cell)
+	var hint := Area2D.new()
+	hint.name = "WallHint"
+	hint.set_script(WALL_HINT_SCRIPT)
+	hint.set("hint_text", String(obj.get("text", "The wall remembers.")))
+	hint.set_meta("object_type", "wall_hint")
+	hint.position = _cell_to_world(cell)
+
+	var marker_root := Node2D.new()
+	marker_root.name = "WallMark"
+	marker_root.position = Vector2(wall_dir.x * 24.0, wall_dir.y * 24.0)
+	hint.add_child(marker_root)
+
+	var backing := ColorRect.new()
+	backing.name = "Backing"
+	backing.position = Vector2(-7.0, -8.0)
+	backing.size = Vector2(14.0, 16.0)
+	backing.color = Color(0.18, 0.10, 0.18, 0.55)
+	backing.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	marker_root.add_child(backing)
+
+	var marker := Label.new()
+	marker.name = "Marker"
+	marker.text = "?"
+	marker.position = Vector2(-7.0, -11.0)
+	marker.size = Vector2(14.0, 18.0)
+	marker.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	marker.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	marker.add_theme_font_size_override("font_size", 13)
+	marker.add_theme_color_override("font_color", Color(0.92, 0.62, 0.68, 0.96))
+	marker.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	marker_root.add_child(marker)
+
+	var pulse := create_tween()
+	pulse.set_loops()
+	pulse.tween_property(marker_root, "modulate:a", 0.55, 0.85)
+	pulse.tween_property(marker_root, "modulate:a", 1.0, 0.85)
+
+	var collision := CollisionShape2D.new()
+	var shape := RectangleShape2D.new()
+	shape.size = Vector2(18.0, 18.0)
+	collision.shape = shape
+	hint.add_child(collision)
+	objects_root.add_child(hint)
+
+func _objects_with_r2_fallback(maze: Dictionary) -> Array:
+	var objects: Array = maze.get("objects", []).duplicate()
+	var occupied: Dictionary = {}
+	for obj in objects:
+		if typeof(obj) != TYPE_DICTIONARY:
+			continue
+		occupied[Vector2i(int(obj.get("x", 0)), int(obj.get("y", 0)))] = true
+
+	if not _objects_have_type(objects, "wall_text"):
+		var wall_texts := [
+			{"text": "牆記得你走過的路。", "preferred": Vector2i(3, 3)},
+			{"text": "看得更遠，不代表更接近出口。", "preferred": Vector2i(8, 5)},
+			{"text": "太容易看見的門，正在看你。", "preferred": Vector2i(13, 7)},
+			{"text": "有些獎賞，可以留在原地。", "preferred": Vector2i(17, 11)},
+		]
+		for entry in wall_texts:
+			var cell := _find_wall_hint_cell(maze, entry["preferred"], occupied)
+			occupied[cell] = true
+			objects.append({
+				"type": "wall_text",
+				"x": cell.x,
+				"y": cell.y,
+				"text": entry["text"],
+			})
+
+	if not _objects_have_type(objects, "enemy"):
+		for preferred in [Vector2i(5, 5), Vector2i(15, 9)]:
+			var cell := _find_floor_near(maze, preferred, occupied)
+			var patrol := _fallback_patrol_for_cell(maze, cell)
+			occupied[cell] = true
+			objects.append({
+				"type": "enemy",
+				"x": cell.x,
+				"y": cell.y,
+				"patrol": patrol,
+			})
+	return objects
+
+func _find_wall_hint_cell(maze: Dictionary, preferred: Vector2i, occupied: Dictionary = {}) -> Vector2i:
+	var w := int(maze.get("width", 0))
+	var h := int(maze.get("height", 0))
+	var max_radius: int = max(w, h)
+	for radius in range(max_radius):
+		for dy in range(-radius, radius + 1):
+			for dx in range(-radius, radius + 1):
+				var cell := preferred + Vector2i(dx, dy)
+				if occupied.has(cell):
+					continue
+				if _is_floor_in_maze(maze, cell) and _has_wall_neighbor(maze, cell):
+					return cell
+	return _find_floor_near(maze, preferred, occupied)
+
+func _objects_have_type(objects: Array, obj_type: String) -> bool:
+	for obj in objects:
+		if typeof(obj) == TYPE_DICTIONARY and String(obj.get("type", "")) == obj_type:
+			return true
+	return false
+
+func _find_floor_near(maze: Dictionary, preferred: Vector2i, occupied: Dictionary) -> Vector2i:
+	var w := int(maze.get("width", 0))
+	var h := int(maze.get("height", 0))
+	var max_radius: int = max(w, h)
+	for radius in range(max_radius):
+		for dy in range(-radius, radius + 1):
+			for dx in range(-radius, radius + 1):
+				var cell := preferred + Vector2i(dx, dy)
+				if occupied.has(cell):
+					continue
+				if _is_floor_in_maze(maze, cell):
+					return cell
+	return preferred
+
+func _fallback_patrol_for_cell(maze: Dictionary, cell: Vector2i) -> Array:
+	var directions: Array[Vector2i] = [Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT, Vector2i.UP]
+	for dir in directions:
+		var next_cell: Vector2i = cell + dir
+		if _is_floor_in_maze(maze, next_cell):
+			return [[cell.x, cell.y], [next_cell.x, next_cell.y]]
+	return [[cell.x, cell.y]]
+
+func _is_floor_in_maze(maze: Dictionary, cell: Vector2i) -> bool:
+	var w := int(maze.get("width", 0))
+	var h := int(maze.get("height", 0))
+	if cell.x < 0 or cell.y < 0 or cell.x >= w or cell.y >= h:
+		return false
+	var tiles: Array = maze.get("tiles", [])
+	if cell.y >= tiles.size():
+		return false
+	var row: Array = tiles[cell.y]
+	if cell.x >= row.size():
+		return false
+	return int(row[cell.x]) == 0
+
+func _has_wall_neighbor(maze: Dictionary, cell: Vector2i) -> bool:
+	return _wall_neighbor_direction(maze, cell) != Vector2i.ZERO
+
+func _wall_neighbor_direction(maze: Dictionary, cell: Vector2i) -> Vector2i:
+	var directions: Array[Vector2i] = [Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT, Vector2i.UP]
+	for dir in directions:
+		if _is_wall_in_maze(maze, cell + dir):
+			return dir
+	return Vector2i.ZERO
+
+func _is_wall_in_maze(maze: Dictionary, cell: Vector2i) -> bool:
+	var w := int(maze.get("width", 0))
+	var h := int(maze.get("height", 0))
+	if cell.x < 0 or cell.y < 0 or cell.x >= w or cell.y >= h:
+		return false
+	var tiles: Array = maze.get("tiles", [])
+	if cell.y >= tiles.size():
+		return false
+	var row: Array = tiles[cell.y]
+	if cell.x >= row.size():
+		return false
+	return int(row[cell.x]) == 1
+
+func _parse_patrol_cells(obj: Dictionary, fallback: Vector2i) -> Array:
+	var cells: Array = []
+	var patrol: Array = obj.get("patrol", [])
+	for point in patrol:
+		if typeof(point) != TYPE_ARRAY or point.size() < 2:
+			continue
+		cells.append(Vector2i(int(point[0]), int(point[1])))
+	if cells.is_empty():
+		cells.append(fallback)
+	return cells
 
 func _init_fog(maze: Dictionary) -> void:
 	var w := int(maze.get("width", 0))
@@ -434,6 +656,11 @@ func _load_initial_stats(maze: Dictionary) -> void:
 		int(events.get("instability_stage", 0)),
 		bool(events.get("critical_state", false))
 	)
+
+func _on_stats_changed(_vision_text: String, _achievement: int, instability: int, _stage: int, _critical_state: bool = false) -> void:
+	if hud and hud.has_method("update_debug_overlay") and game_state and game_state.has_method("get_debug_snapshot"):
+		hud.update_debug_overlay(game_state.get_debug_snapshot())
+	_apply_instability_side_effects(instability)
 
 func _refresh_instability_stats() -> void:
 	if _is_game_over or not game_state:
@@ -487,6 +714,26 @@ func _apply_maze_state(maze: Dictionary) -> void:
 		_apply_critical_state(bool(game_state.get("critical_state")))
 	if bool(_maze.get("expanded_this_frame", false)):
 		_play_expansion_feedback()
+
+func _apply_instability_side_effects(instability: int) -> void:
+	var active := instability >= 61 and not _is_game_over
+	if hud and hud.has_method("set_distortion_active"):
+		hud.set_distortion_active(active)
+	if active:
+		if _distortion_tween != null and _distortion_tween.is_valid():
+			return
+		_distortion_tween = create_tween()
+		_distortion_tween.set_loops()
+		_distortion_tween.tween_property(tile_layer, "modulate", Color(0.92, 0.78, 0.76, 1.0), 0.44)
+		_distortion_tween.parallel().tween_property(fog_layer, "modulate", Color(0.78, 0.58, 0.7, 1.0), 0.44)
+		_distortion_tween.tween_property(tile_layer, "modulate", Color.WHITE, 0.5)
+		_distortion_tween.parallel().tween_property(fog_layer, "modulate", Color.WHITE, 0.5)
+	else:
+		if _distortion_tween != null and _distortion_tween.is_valid():
+			_distortion_tween.kill()
+		_distortion_tween = null
+		tile_layer.modulate = Color.WHITE
+		fog_layer.modulate = Color.WHITE
 
 func _trigger_critical_sequence() -> void:
 	if critical_event_controller and critical_event_controller.has_method("trigger_critical_sequence"):

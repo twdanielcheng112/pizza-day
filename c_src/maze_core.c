@@ -24,7 +24,7 @@
  *     "expanded_this_frame": <bool>,
  *     "player": {"x": <int>, "y": <int>},
  *     "tiles":  [[<int>, ...], ...],  // 0 = floor, 1 = wall, row-major
- *     "objects": [{"type":"chest|key|vision_core|exit", "exit_type":"false|true", "x": <int>, "y": <int>}, ...],
+ *     "objects": [{"type":"chest|key|vision_core|exit|wall_text|enemy", "exit_type":"false|true", "x": <int>, "y": <int>}, ...],
  *     "stats":  { ... },
  *     "events": { ... }
  *   }
@@ -47,7 +47,9 @@
 #define CHEST_COUNT 2
 #define KEY_COUNT 1
 #define CORE_COUNT 3
-#define MAX_OBJECTS 16
+#define ENEMY_COUNT 2
+#define WALL_TEXT_COUNT 4
+#define MAX_OBJECTS 24
 
 static int grid[MAX_MAZE_H][MAX_MAZE_W];
 static int maze_w = BASE_MAZE_W;
@@ -60,6 +62,10 @@ typedef struct {
     const char *exit_type;
     int x;
     int y;
+    const char *text;
+    int patrol_count;
+    int patrol_x[4];
+    int patrol_y[4];
 } MazeObject;
 
 static MazeObject objects[MAX_OBJECTS];
@@ -155,6 +161,86 @@ static int try_place_object(const char *type, const char *exit_type, int attempt
     return 0;
 }
 
+static int add_wall_text_at(const char *text, int x, int y) {
+    if (!can_place_at(x, y)) return 0;
+    int has_wall_neighbor = 0;
+    for (int i = 0; i < 4; ++i) {
+        int nx = x + DX[i];
+        int ny = y + DY[i];
+        if (nx < 0 || ny < 0 || nx >= maze_w || ny >= maze_h) continue;
+        if (grid[ny][nx] == TILE_WALL) {
+            has_wall_neighbor = 1;
+            break;
+        }
+    }
+    if (!has_wall_neighbor) return 0;
+    if (object_count >= MAX_OBJECTS) return 0;
+    objects[object_count] = (MazeObject){"wall_text", NULL, x, y};
+    objects[object_count].text = text;
+    object_count++;
+    occupied[y][x] = 1;
+    return 1;
+}
+
+static int try_place_wall_text(const char *text, int attempts) {
+    for (int i = 0; i < attempts; ++i) {
+        int x = rand() % maze_w;
+        int y = rand() % maze_h;
+        if (add_wall_text_at(text, x, y)) return 1;
+    }
+    return 0;
+}
+
+static int find_patrol_neighbor(int x, int y, int *out_x, int *out_y) {
+    int order[4] = {0, 1, 2, 3};
+    for (int i = 3; i > 0; --i) {
+        int j = rand() % (i + 1);
+        int tmp = order[i];
+        order[i] = order[j];
+        order[j] = tmp;
+    }
+
+    for (int i = 0; i < 4; ++i) {
+        int d = order[i];
+        int nx = x + DX[d];
+        int ny = y + DY[d];
+        if (nx < 0 || ny < 0 || nx >= maze_w || ny >= maze_h) continue;
+        if (grid[ny][nx] != TILE_FLOOR) continue;
+        *out_x = nx;
+        *out_y = ny;
+        return 1;
+    }
+    return 0;
+}
+
+static int add_enemy_at(int x, int y) {
+    if (!can_place_at(x, y)) return 0;
+    if (object_count >= MAX_OBJECTS) return 0;
+
+    int patrol_x = x;
+    int patrol_y = y;
+    if (!find_patrol_neighbor(x, y, &patrol_x, &patrol_y)) return 0;
+
+    objects[object_count] = (MazeObject){"enemy", NULL, x, y};
+    objects[object_count].patrol_count = 2;
+    objects[object_count].patrol_x[0] = x;
+    objects[object_count].patrol_y[0] = y;
+    objects[object_count].patrol_x[1] = patrol_x;
+    objects[object_count].patrol_y[1] = patrol_y;
+    object_count++;
+    occupied[y][x] = 1;
+    return 1;
+}
+
+static int try_place_enemy(int attempts) {
+    for (int i = 0; i < attempts; ++i) {
+        int x = rand() % maze_w;
+        int y = rand() % maze_h;
+        if (add_enemy_at(x, y)) return 1;
+    }
+    return 0;
+}
+
 static int find_center_floor(int *out_x, int *out_y) {
     int cx = maze_w / 2;
     int cy = maze_h / 2;
@@ -238,6 +324,13 @@ static void place_exits(void) {
 }
 
 static void place_objects(void) {
+    static const char *wall_texts[WALL_TEXT_COUNT] = {
+        "牆記得你走過的路。",
+        "看得更遠，不代表更接近出口。",
+        "太容易看見的門，正在看你。",
+        "有些獎賞，可以留在原地。"
+    };
+
     object_count = 0;
     memset(occupied, 0, sizeof(occupied));
     occupied[1][1] = 1;
@@ -252,6 +345,12 @@ static void place_objects(void) {
     }
     for (int i = 0; i < CORE_COUNT; ++i) {
         try_place_object("vision_core", NULL, 200);
+    }
+    for (int i = 0; i < WALL_TEXT_COUNT; ++i) {
+        try_place_wall_text(wall_texts[i], 200);
+    }
+    for (int i = 0; i < ENEMY_COUNT; ++i) {
+        try_place_enemy(200);
     }
 }
 
@@ -387,6 +486,17 @@ static int write_json(
         fprintf(f, "    {\"type\":\"%s\"", objects[i].type);
         if (objects[i].exit_type != NULL) {
             fprintf(f, ",\"exit_type\":\"%s\"", objects[i].exit_type);
+        }
+        if (objects[i].text != NULL) {
+            fprintf(f, ",\"text\":\"%s\"", objects[i].text);
+        }
+        if (objects[i].patrol_count > 0) {
+            fprintf(f, ",\"patrol\":[");
+            for (int p = 0; p < objects[i].patrol_count; ++p) {
+                fprintf(f, "[%d,%d]", objects[i].patrol_x[p], objects[i].patrol_y[p]);
+                if (p != objects[i].patrol_count - 1) fputc(',', f);
+            }
+            fputc(']', f);
         }
         fprintf(f, ",\"x\":%d,\"y\":%d}", objects[i].x, objects[i].y);
         if (i != object_count - 1) fputc(',', f);

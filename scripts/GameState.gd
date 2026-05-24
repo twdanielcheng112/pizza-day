@@ -60,6 +60,9 @@ func apply_vision_core_pickup() -> void:
 	picked_vision_cores += 1
 	vision_level = min(vision_level + 2, MAX_VISION_LEVEL)
 
+func apply_enemy_seen() -> void:
+	defeated_enemies += 1
+
 func get_vision_core_count() -> int:
 	return picked_vision_cores
 
@@ -80,6 +83,17 @@ func to_core_stats() -> Dictionary:
 		"puzzles": solved_puzzles,
 		"enemies": defeated_enemies,
 		"explored": explored_tiles,
+	}
+
+func get_debug_snapshot() -> Dictionary:
+	return {
+		"vision_level": vision_level,
+		"opened_chests": opened_chests,
+		"puzzles_solved": solved_puzzles,
+		"enemies_seen": defeated_enemies,
+		"explored_tiles": explored_tiles,
+		"instability": instability,
+		"critical_state": critical_state,
 	}
 
 func _emit_stats_changed() -> void:

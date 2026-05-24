@@ -16,18 +16,35 @@ const WARNING_STINGS := {
 @onready var achievement_label: Label = $Panel/StatsBox/AchievementLabel
 @onready var instability_label: Label = $Panel/StatsBox/InstabilityLabel
 @onready var warning_sfx: AudioStreamPlayer = $WarningSfx
+@onready var panel: Panel = $Panel
 
 var _previous_stage := 0
 var _expansion_label: Label = null
 var _expansion_flash: ColorRect = null
 var _critical_label: Label = null
 var _critical_flash: ColorRect = null
+var _debug_panel: Panel = null
+var _debug_label: Label = null
+var _debug_snapshot: Dictionary = {}
+var _distortion_active := false
+var _panel_base_position := Vector2.ZERO
 
 func _ready() -> void:
+	if panel:
+		_panel_base_position = panel.position
 	_create_critical_flash()
 	_create_critical_label()
 	_create_expansion_flash()
 	_create_expansion_label()
+	_create_debug_overlay()
+
+func _process(_delta: float) -> void:
+	if panel == null:
+		return
+	if _distortion_active:
+		panel.position = _panel_base_position + Vector2(randf_range(-1.4, 1.4), randf_range(-1.0, 1.0))
+	else:
+		panel.position = _panel_base_position
 
 func update_stats(vision_text: String, achievement: int, instability: int, stage: int, critical_state: bool = false) -> void:
 	vision_label.text = "Vision: %s" % vision_text
@@ -38,6 +55,21 @@ func update_stats(vision_text: String, achievement: int, instability: int, stage
 	if stage > _previous_stage:
 		_play_warning_sfx(stage)
 	_previous_stage = stage
+
+func toggle_debug_overlay() -> void:
+	if _debug_panel == null:
+		_create_debug_overlay()
+	_debug_panel.visible = not _debug_panel.visible
+	_render_debug_overlay()
+
+func update_debug_overlay(snapshot: Dictionary) -> void:
+	_debug_snapshot = snapshot.duplicate()
+	_render_debug_overlay()
+
+func set_distortion_active(active: bool) -> void:
+	_distortion_active = active
+	if not active and panel:
+		panel.position = _panel_base_position
 
 func show_critical_sequence() -> void:
 	_pulse_instability_label()
@@ -128,6 +160,55 @@ func _create_critical_label() -> void:
 	_critical_label.add_theme_font_size_override("font_size", 16)
 	_critical_label.add_theme_color_override("font_color", Color(1.0, 0.2, 0.16))
 	add_child(_critical_label)
+
+func _create_debug_overlay() -> void:
+	_debug_panel = Panel.new()
+	_debug_panel.visible = false
+	_debug_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_debug_panel.offset_left = 342.0
+	_debug_panel.offset_top = 8.0
+	_debug_panel.offset_right = 632.0
+	_debug_panel.offset_bottom = 220.0
+	_debug_panel.z_index = 30
+	add_child(_debug_panel)
+
+	_debug_label = Label.new()
+	_debug_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_debug_label.offset_left = 8.0
+	_debug_label.offset_top = 7.0
+	_debug_label.offset_right = 282.0
+	_debug_label.offset_bottom = 204.0
+	_debug_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_debug_label.clip_text = true
+	_debug_label.add_theme_font_size_override("font_size", 8)
+	_debug_label.add_theme_color_override("font_color", Color(0.92, 0.86, 0.88))
+	_debug_panel.add_child(_debug_label)
+	_render_debug_overlay()
+
+func _render_debug_overlay() -> void:
+	if _debug_label == null:
+		return
+	var vision := int(_debug_snapshot.get("vision_level", 0))
+	var chests := int(_debug_snapshot.get("opened_chests", 0))
+	var puzzles := int(_debug_snapshot.get("puzzles_solved", 0))
+	var enemies := int(_debug_snapshot.get("enemies_seen", 0))
+	var explored := int(_debug_snapshot.get("explored_tiles", 0))
+	var instability := int(_debug_snapshot.get("instability", 0))
+	var explored_score := int(floor(float(explored) / 10.0))
+	_debug_label.text = (
+		"[DEBUG: INSTABILITY FORMULA]\n\n"
+		+ "Vision Level: %d        x10 = %d\n" % [vision, vision * 10]
+		+ "Opened Chests: %d       x5  = %d\n" % [chests, chests * 5]
+		+ "Puzzles Solved: %d      x8  = %d\n" % [puzzles, puzzles * 8]
+		+ "Enemies Seen: %d        x3  = %d\n" % [enemies, enemies * 3]
+		+ "Explored Tiles: %d      /10 = %d\n\n" % [explored, explored_score]
+		+ "Total Instability: %d\n" % instability
+		+ "Expansion Threshold: 31\n"
+		+ "Distortion Threshold: 61\n"
+		+ "Critical Threshold: 70\n"
+		+ "Collapse Threshold: 81\n"
+		+ "Bad Ending Threshold: 100"
+	)
 
 func _create_expansion_flash() -> void:
 	_expansion_flash = ColorRect.new()

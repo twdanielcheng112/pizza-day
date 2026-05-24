@@ -17,10 +17,16 @@ const EXPANSION_ZOOM_OUT_FACTOR := 0.86
 
 var _nearest_interactable: Node = null
 var _hint_label: Label = null
+var _pending_confirmation: Node = null
+var _confirmation_layer: CanvasLayer = null
+var _confirmation_label: Label = null
+var _is_reading_hint := false
 
 func _ready() -> void:
+	add_to_group("player")
 	_snap_to_cell()
 	_create_hint()
+	_create_confirmation_prompt()
 	_update_interaction_hint()
 	_refresh_vision()
 
@@ -29,6 +35,19 @@ func _process(_delta: float) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not event is InputEventKey or not event.pressed or event.echo:
+		return
+	if _is_reading_hint:
+		if event.keycode in [KEY_E, KEY_ENTER, KEY_KP_ENTER, KEY_ESCAPE, KEY_Q]:
+			_close_wall_hint()
+			get_viewport().set_input_as_handled()
+		return
+	if _pending_confirmation != null:
+		if event.keycode in [KEY_E, KEY_ENTER, KEY_KP_ENTER]:
+			_confirm_pending_interaction()
+			get_viewport().set_input_as_handled()
+		elif event.keycode in [KEY_ESCAPE, KEY_Q]:
+			_cancel_pending_interaction()
+			get_viewport().set_input_as_handled()
 		return
 	if event.keycode == KEY_E:
 		_try_interact()
@@ -136,9 +155,85 @@ func _find_nearest_interactable() -> Node:
 func _try_interact() -> void:
 	if _nearest_interactable == null:
 		return
+	if _requires_confirmation(_nearest_interactable):
+		_show_confirmation_prompt(_nearest_interactable)
+		return
 	if _nearest_interactable.has_method("interact"):
 		_nearest_interactable.interact(self)
 		_update_interaction_hint()
+
+func _requires_confirmation(node: Node) -> bool:
+	return String(node.get_meta("object_type", "")) == "vision_core"
+
+func _show_confirmation_prompt(node: Node) -> void:
+	_pending_confirmation = node
+	if _confirmation_layer == null:
+		_create_confirmation_prompt()
+	var instability := 0
+	if maze and maze.has_method("get_instability_value"):
+		instability = int(maze.get_instability_value())
+	var message := "Take the vision core?\nThe maze will remember this."
+	if instability >= 70:
+		message = "Take more from the maze?\nIt is already looking back."
+	elif instability >= 61:
+		message = "Take the vision core?\nThe walls are thin now."
+	elif instability >= 31:
+		message = "Take the vision core?\nThe maze has started to move."
+	_confirmation_label.text = "%s\n\nE / Enter: take    Esc / Q: leave" % message
+	_confirmation_layer.visible = true
+
+func _confirm_pending_interaction() -> void:
+	var node := _pending_confirmation
+	_pending_confirmation = null
+	_confirmation_layer.visible = false
+	if node != null and is_instance_valid(node) and node.has_method("interact"):
+		node.interact(self)
+	_update_interaction_hint()
+
+func _cancel_pending_interaction() -> void:
+	_pending_confirmation = null
+	if _confirmation_layer:
+		_confirmation_layer.visible = false
+	_update_interaction_hint()
+
+func on_wall_hint_read(text: String) -> void:
+	_pending_confirmation = null
+	_is_reading_hint = true
+	if _confirmation_layer == null:
+		_create_confirmation_prompt()
+	_confirmation_label.text = "%s\n\nE / Enter / Esc: close" % text
+	_confirmation_layer.visible = true
+
+func _close_wall_hint() -> void:
+	_is_reading_hint = false
+	if _confirmation_layer:
+		_confirmation_layer.visible = false
+	_update_interaction_hint()
+
+func _create_confirmation_prompt() -> void:
+	_confirmation_layer = CanvasLayer.new()
+	_confirmation_layer.visible = false
+	_confirmation_layer.layer = 25
+	add_child(_confirmation_layer)
+
+	var panel := Panel.new()
+	panel.offset_left = 170.0
+	panel.offset_top = 236.0
+	panel.offset_right = 470.0
+	panel.offset_bottom = 336.0
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_confirmation_layer.add_child(panel)
+
+	_confirmation_label = Label.new()
+	_confirmation_label.offset_left = 12.0
+	_confirmation_label.offset_top = 10.0
+	_confirmation_label.offset_right = 288.0
+	_confirmation_label.offset_bottom = 90.0
+	_confirmation_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_confirmation_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_confirmation_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_confirmation_label.add_theme_font_size_override("font_size", 12)
+	panel.add_child(_confirmation_label)
 
 func on_chest_opened(source: Node = null) -> void:
 	if maze and maze.has_method("on_chest_opened"):
