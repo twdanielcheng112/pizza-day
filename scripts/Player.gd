@@ -11,6 +11,7 @@ const INTERACT_RANGE := 0
 const EXPANSION_ZOOM_OUT_FACTOR := 0.86
 const WALK_SFX_STREAM := preload("res://assets/audio/walk_sfx.mp3")
 const WALK_SFX_PITCH_RANGE := Vector2(0.85, 1.15)
+const HELD_STEP_INTERVAL := 0.15  ## seconds per cell while a direction key is held
 
 @export var cell: Vector2i = Vector2i(1, 1)
 
@@ -24,6 +25,7 @@ var _pending_confirmation: Node = null
 var _confirmation_layer: CanvasLayer = null
 var _confirmation_label: Label = null
 var _is_reading_hint := false
+var _held_step_cooldown := 0.0
 
 func _ready() -> void:
 	add_to_group("player")
@@ -38,22 +40,28 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	_update_interaction_hint()
 
-func _unhandled_input(event: InputEvent) -> void:
-	if not event is InputEventKey or not event.pressed:
+func _physics_process(delta: float) -> void:
+	if _is_reading_hint or _pending_confirmation != null:
+		_held_step_cooldown = 0.0
 		return
-	# Movement keys accept echo events too, so both single taps and held keys
-	# produce a step per event. Modal prompts and interact keep `echo` filtered
-	# below so a single hold can't spam-confirm them.
+	var dir := _held_direction()
+	if dir == Vector2i.ZERO:
+		_held_step_cooldown = 0.0
+		return
+	_held_step_cooldown -= delta
+	if _held_step_cooldown <= 0.0:
+		_try_move(dir)
+		_held_step_cooldown = HELD_STEP_INTERVAL
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not event is InputEventKey or not event.pressed or event.echo:
+		return
 	if _is_reading_hint:
-		if event.echo:
-			return
 		if event.keycode in [KEY_E, KEY_ENTER, KEY_KP_ENTER, KEY_ESCAPE, KEY_Q]:
 			_close_wall_hint()
 			get_viewport().set_input_as_handled()
 		return
 	if _pending_confirmation != null:
-		if event.echo:
-			return
 		if event.keycode in [KEY_E, KEY_ENTER, KEY_KP_ENTER]:
 			_confirm_pending_interaction()
 			get_viewport().set_input_as_handled()
@@ -62,21 +70,17 @@ func _unhandled_input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 		return
 	if event.keycode == KEY_E:
-		if event.echo:
-			return
 		_try_interact()
-		return
-	var dir := _input_direction(event)
-	if dir == Vector2i.ZERO:
-		return
-	_try_move(dir)
 
-func _input_direction(event: InputEventKey) -> Vector2i:
-	match event.keycode:
-		KEY_W, KEY_UP:    return Vector2i.UP
-		KEY_S, KEY_DOWN:  return Vector2i.DOWN
-		KEY_A, KEY_LEFT:  return Vector2i.LEFT
-		KEY_D, KEY_RIGHT: return Vector2i.RIGHT
+func _held_direction() -> Vector2i:
+	if Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP):
+		return Vector2i.UP
+	if Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN):
+		return Vector2i.DOWN
+	if Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT):
+		return Vector2i.LEFT
+	if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT):
+		return Vector2i.RIGHT
 	return Vector2i.ZERO
 
 func _try_move(dir: Vector2i) -> void:
