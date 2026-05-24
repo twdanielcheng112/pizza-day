@@ -10,7 +10,7 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/EndingScreen.tscn" id="8_ending_screen"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hud_panel"]
-bg_color = Color(0.0470588, 0.0352941, 0.0588235, 0.48)
+bg_color = Color(0, 0, 0, 0)
 content_margin_left = 0.0
 content_margin_top = 0.0
 content_margin_right = 0.0
@@ -45,10 +45,13 @@ volume_db = -10.0
 script = ExtResource("6_hud")
 
 [node name="Panel" type="Panel" parent="HUD" unique_id=1120426485]
+anchor_top = 1.0
+anchor_bottom = 1.0
 offset_left = 8.0
-offset_top = 8.0
+offset_top = -58.0
 offset_right = 250.0
-offset_bottom = 58.0
+offset_bottom = -8.0
+grow_vertical = 0
 theme_override_styles/panel = SubResource("StyleBoxFlat_hud_panel")
 
 [node name="StatsBox" type="VBoxContainer" parent="HUD/Panel" unique_id=2026210365]
