@@ -9,11 +9,14 @@ const CELL_SIZE := 24
 const DEFAULT_VISION_RADIUS := 1  ## 3x3
 const INTERACT_RANGE := 0
 const EXPANSION_ZOOM_OUT_FACTOR := 0.86
+const WALK_SFX_STREAM := preload("res://assets/audio/walk_sfx.mp3")
+const WALK_SFX_PITCH_RANGE := Vector2(0.85, 1.15)
 
 @export var cell: Vector2i = Vector2i(1, 1)
 
 @onready var maze: Node2D = get_parent()
 @onready var camera: Camera2D = $Camera2D
+@onready var _walk_sfx: AudioStreamPlayer = $WalkSfx
 
 var _nearest_interactable: Node = null
 var _hint_label: Label = null
@@ -29,6 +32,8 @@ func _ready() -> void:
 	_create_confirmation_prompt()
 	_update_interaction_hint()
 	_refresh_vision()
+	if _walk_sfx and _walk_sfx.stream == null:
+		_walk_sfx.stream = WALK_SFX_STREAM
 
 func _process(_delta: float) -> void:
 	_update_interaction_hint()
@@ -73,6 +78,13 @@ func _try_move(dir: Vector2i) -> void:
 	_snap_to_cell()
 	_update_interaction_hint()
 	_refresh_vision()
+	_play_walk_sfx()
+
+func _play_walk_sfx() -> void:
+	if _walk_sfx == null or _walk_sfx.stream == null:
+		return
+	_walk_sfx.pitch_scale = randf_range(WALK_SFX_PITCH_RANGE.x, WALK_SFX_PITCH_RANGE.y)
+	_walk_sfx.play()
 
 func set_cell_from_maze(new_cell: Vector2i) -> void:
 	cell = new_cell
