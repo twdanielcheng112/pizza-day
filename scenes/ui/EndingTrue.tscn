@@ -4,6 +4,7 @@
 
 [node name="EndingTrue" type="CanvasLayer"]
 script = ExtResource("1_ending_screen")
-default_title = "你沒有再拿"
-default_body = "迷宮等了一會兒。你沒有回答。於是它把真正的門還給你。"
+default_title = "你回到了你的世界"
+default_body = "你什麼都沒帶走。
+它這次沒有再記得你。"
 default_hint = "按 R 再走一次"

@@ -123,25 +123,19 @@ func get_debug_snapshot() -> Dictionary:
 		"critical_state": critical_state,
 	}
 
-func build_ending_recap(exit_type: String) -> String:
+func build_ending_recap() -> String:
 	var explored_text := "%d / %d tiles (%.0f%%)" % [
 		explored_tiles,
 		total_walkable_tiles,
 		get_exploration_percent(),
 	]
-	var exit_text := "崩塌" if exit_type.is_empty() else exit_type
-	if exit_type == "false":
-		exit_text = "假出口"
-	elif exit_type == "true":
-		exit_text = "真出口"
 	return (
 		"本局回顧\n"
 		+ "打開的寶箱：%d\n" % opened_chests
 		+ "拿走的視野核心：%d\n" % picked_vision_cores
 		+ "按下的貪婪按鈕：%d\n" % greed_buttons_pressed
 		+ "探索範圍：%s\n" % explored_text
-		+ "最終不穩定度：%d\n" % instability
-		+ "抵達出口：%s" % exit_text
+		+ "最終不穩定度：%d" % instability
 	)
 
 func _emit_stats_changed() -> void:
