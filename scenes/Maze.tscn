@@ -47,28 +47,28 @@ script = ExtResource("6_hud")
 [node name="Panel" type="Panel" parent="HUD" unique_id=1120426485]
 offset_left = 8.0
 offset_top = 8.0
-offset_right = 142.0
+offset_right = 250.0
 offset_bottom = 58.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_hud_panel")
 
 [node name="StatsBox" type="VBoxContainer" parent="HUD/Panel" unique_id=2026210365]
 offset_left = 7.0
 offset_top = 5.0
-offset_right = 127.0
+offset_right = 235.0
 offset_bottom = 45.0
 theme_override_constants/separation = 0
 
 [node name="VisionLabel" type="Label" parent="HUD/Panel/StatsBox" unique_id=1547280723]
 theme_override_font_sizes/font_size = 11
-text = "Vision: 3x3"
+text = "視野 Vision: 3x3"
 
 [node name="AchievementLabel" type="Label" parent="HUD/Panel/StatsBox" unique_id=607620680]
 theme_override_font_sizes/font_size = 11
-text = "Achievement: 0"
+text = "成就 Achievement: 0"
 
 [node name="InstabilityLabel" type="Label" parent="HUD/Panel/StatsBox" unique_id=1473264868]
 theme_override_font_sizes/font_size = 11
-text = "Instability: 10"
+text = "失控值 Instability: 10"
 
 [node name="WarningSfx" type="AudioStreamPlayer" parent="HUD" unique_id=1564172054]
 volume_db = -7.0

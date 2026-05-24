@@ -53,9 +53,9 @@ func _process(_delta: float) -> void:
 		_collapse_noise.color.a = randf_range(0.035, 0.11)
 
 func update_stats(vision_text: String, achievement: int, instability: int, stage: int, critical_state: bool = false) -> void:
-	vision_label.text = "Vision: %s" % vision_text
-	achievement_label.text = "Achievement: %d" % achievement
-	instability_label.text = "Instability: %d%s" % [instability, "  CRITICAL" if critical_state else ""]
+	vision_label.text = "視野 Vision: %s" % vision_text
+	achievement_label.text = "成就 Achievement: %d" % achievement
+	instability_label.text = "失控值 Instability: %d%s" % [instability, "  臨界 CRITICAL" if critical_state else ""]
 	instability_label.add_theme_color_override("font_color", _get_instability_color(instability))
 
 	if stage > _previous_stage:
@@ -89,7 +89,7 @@ func show_greed_feedback(delta: int) -> void:
 	if _expansion_label == null:
 		return
 	_pulse_instability_label()
-	_expansion_label.text = "Instability +%d" % delta
+	_expansion_label.text = "失控值 +%d" % delta
 	_expansion_label.visible = true
 	_expansion_label.modulate = Color(1.0, 0.24, 0.16, 1.0)
 	var base_position := _expansion_label.position
@@ -142,7 +142,7 @@ func show_expansion_feedback() -> void:
 		return
 	_pulse_instability_label()
 	_flash_screen()
-	_expansion_label.text = "Maze expanding..."
+	_expansion_label.text = "邊界擴張 Maze expanding..."
 	_expansion_label.visible = true
 	_expansion_label.modulate = Color(1.0, 0.82, 0.22, 1.0)
 	var base_position := _expansion_label.position
@@ -157,7 +157,7 @@ func show_expansion_feedback() -> void:
 func _create_expansion_label() -> void:
 	_expansion_label = Label.new()
 	_expansion_label.visible = false
-	_expansion_label.text = "Maze expanding..."
+	_expansion_label.text = "邊界擴張 Maze expanding..."
 	_expansion_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_expansion_label.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_expansion_label.offset_left = 0.0
