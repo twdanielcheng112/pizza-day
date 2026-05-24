@@ -28,6 +28,10 @@ window/stretch/scale_mode="integer"
 
 3d/physics_engine="Jolt Physics"
 
+[gui]
+
+theme/custom="res://assets/themes/default_theme.tres"
+
 [rendering]
 
 rendering_device/driver.windows="d3d12"

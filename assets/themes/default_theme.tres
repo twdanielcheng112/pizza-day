@@ -1,0 +1,17 @@
+[gd_resource type="Theme" load_steps=4 format=3 uid="uid://b8x2theme0fonts"]
+
+[ext_resource type="FontFile" path="res://assets/fonts/NotoSerifTC-Regular.otf" id="1_body"]
+[ext_resource type="FontFile" path="res://assets/fonts/NotoSerifTC-Black.otf" id="2_heavy"]
+[ext_resource type="FontFile" path="res://assets/fonts/JetBrainsMono-Regular.ttf" id="3_mono"]
+
+[resource]
+default_font = ExtResource("1_body")
+default_font_size = 12
+Label/fonts/font = ExtResource("1_body")
+Label/font_sizes/font_size = 12
+HeaderSmall/base_type = &"Label"
+HeaderSmall/fonts/font = ExtResource("2_heavy")
+HeaderSmall/font_sizes/font_size = 14
+Mono/base_type = &"Label"
+Mono/fonts/font = ExtResource("3_mono")
+Mono/font_sizes/font_size = 12
