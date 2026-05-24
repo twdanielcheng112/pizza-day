@@ -121,13 +121,15 @@ func show_critical_sequence() -> void:
 	_critical_label.visible = false
 
 func _get_instability_color(value: int) -> Color:
+	if value >= 100:
+		return Color.html("#4A1828")
 	if value >= 81:
-		return Color(0.92, 0.12, 0.16)
+		return Color.html("#B85060")
 	if value >= 61:
-		return Color(1.0, 0.48, 0.12)
+		return Color.html("#D89060")
 	if value >= 31:
-		return Color(0.95, 0.78, 0.18)
-	return Color(0.35, 0.86, 0.45)
+		return Color.html("#E8C870")
+	return Color.html("#C8E0BC")
 
 func _play_warning_sfx(stage: int) -> void:
 	var stream: AudioStream = WARNING_STINGS.get(stage, null)
